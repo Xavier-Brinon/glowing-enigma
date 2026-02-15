@@ -1,0 +1,158 @@
+#+title: Switch from TanStack Router + Express to TanStack Start
+#+author: HaQadosch
+#+date: [2026-02-15 Sun]
+#+startup: indent
+* Status
+
+Accepted
+
+* Context and Problem Statement
+
+The current architecture (from =implementationPlan.org=) uses three
+separate layers:
+- TanStack Router :: for client-side routing
+- TanStack Query :: for server-state management
+- Express :: as a standalone API server on port 3001
+
+This requires running two processes (Vite dev server + Express), a
+Vite proxy configuration to forward =/api= calls, and manual wiring
+between the frontend and backend.
+
+[[https://tanstack.com/start/latest][TanStack Start]] is a full-stack React framework built on top of
+TanStack Router. It provides *server functions* (=createServerFn=)
+that let you write server-side code directly alongside your route
+components — no separate API server needed.
+
+The question: should we replace the Router + Express architecture with
+TanStack Start's integrated full-stack approach?
+
+* Options Considered
+
+** Keep TanStack Router + Express (current plan)
+
+Pros:
+- Well-understood separation: frontend and backend are independent
+- Express is mature, widely documented
+- Explicit REST API is easy to test with curl
+
+Cons:
+- Two processes to run concurrently
+- Vite proxy configuration needed
+- Manual wiring between fetch calls and API routes
+- More boilerplate for each CRUD operation
+
+** TanStack Start
+
+Pros:
+- Single process — no separate Express server, no proxy config
+- Server functions (=createServerFn=) colocate server logic with
+  routes
+- Built on TanStack Router — file-based routing carries over
+- TanStack Query integration is built-in
+- Server functions handle input validation via =inputValidator=
+- Eliminates the need to define REST endpoints manually
+- Active development by the TanStack team
+
+Cons:
+- Currently in alpha — API may change
+- Less community documentation than Express
+- Server functions are a different mental model from REST APIs
+- Fewer escape hatches if you need custom server middleware
+
+* Decision
+
+Switch from TanStack Router + Express to [[https://tanstack.com/start/latest][TanStack Start]].
+
+** Learning Opportunity
+Consistent with [[file:0002-switch-to-node-sqlite.org][ADR 0002]], this project prioritises learning. TanStack
+Start represents the future of the TanStack ecosystem. Learning it now
+on a low-stakes project builds familiarity before it reaches stable.
+
+** Simpler Architecture
+The Express layer existed solely to serve CRUD endpoints for the
+=books= table. TanStack Start's =createServerFn= eliminates this
+entire layer — server logic lives next to the routes that use it.
+
+Before (3 layers):
+: React component → fetch('/api/books') → Express route → node:sqlite
+
+After (2 layers):
+: React component → createServerFn → node:sqlite
+
+** Less Configuration
+No Vite proxy, no =concurrently= to run two processes, no separate
+=server/= directory. One =npm run dev= starts everything.
+
+** TanStack Ecosystem Alignment
+The project already uses TanStack Router and TanStack Query. TanStack
+Start unifies them under one framework rather than gluing them together
+manually.
+
+** Reversibility
+If TanStack Start proves too unstable, the server functions can be
+extracted back into Express routes. The database layer (=node:sqlite=
+in a single file) is unaffected by this change.
+
+* Consequences
+
+** Positive
+
+- Single process, single =npm run dev= command
+- No Express dependency, no Vite proxy configuration
+- Server logic colocated with the routes that use it
+- Deeper learning of the TanStack full-stack model
+- Smaller dependency footprint
+
+** Negative
+
+- Alpha-stage framework — breaking changes are expected
+- =createServerFn= is a different pattern from REST endpoints
+- Fewer tutorials and Stack Overflow answers available
+- Debugging server functions may be less familiar than Express middleware
+
+** Mitigation
+
+- Pin TanStack Start version in =package.json= to avoid surprise
+  breakage
+- The database layer (=node:sqlite=, [[file:0002-switch-to-node-sqlite.org][ADR 0002]]) is independent — only
+  the call sites change, not the data access code
+- If Start proves unworkable, extracting server functions into Express
+  routes is a mechanical refactor — the business logic stays the same
+- This is a personal local app — alpha instability is an acceptable
+  learning cost
+
+* Impact on Architecture
+
+The project structure simplifies:
+
+#+begin_src shell
+  book-tracker/
+  ├── src/
+  │   ├── routes/
+  │   │   ├── __root.tsx          # Root layout
+  │   │   ├── index.tsx           # Book list + server functions
+  │   │   └── books/
+  │   │       ├── new.tsx         # Add book form + createServerFn
+  │   │       └── $bookId.tsx     # Edit/delete + createServerFn
+  │   ├── components/
+  │   │   ├── BookCard.tsx
+  │   │   └── BookForm.tsx
+  │   └── lib/
+  │       └── db.ts               # node:sqlite setup and queries
+  ├── app.config.ts               # TanStack Start config
+  ├── package.json
+  └── tsconfig.json
+#+end_src
+
+Key changes from previous plan:
+- =server/= directory removed — no Express server
+- =vite.config.ts= replaced by =app.config.ts= (TanStack Start config)
+- Database layer moves to =src/lib/db.ts=
+- Server functions defined in route files via =createServerFn=
+
+* References
+
+- [[https://tanstack.com/start/latest][TanStack Start documentation]]
+- [[https://tanstack.com/start/latest/docs/framework/react/guide/databases][TanStack Start — Database integration guide]]
+- [[https://tanstack.com/start/latest/docs/framework/react/build-from-scratch][TanStack Start — Build from scratch]]
+- [[file:0002-switch-to-node-sqlite.org][ADR 0002 — Switch to node:sqlite (unchanged by this decision)]]

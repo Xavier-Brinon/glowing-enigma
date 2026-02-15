@@ -15,15 +15,14 @@ architecture decisions.
 1. **Read `specs/requirements.md`** (created by Requirements Analyst)
 
 2. **Review existing decisions**:
-   - Database: node:sqlite (see ADR/0002-switch-to-node-sqlite.org,
-     supersedes ADR 0001)
-   - Tech stack: TanStack Router + TanStack Query + Express +
-     node:sqlite
+   - Database: node:sqlite (see ADR/0002-switch-to-node-sqlite.org)
+   - Framework: TanStack Start (see ADR/0003-switch-to-tanstack-start.org)
+   - Tech stack: TanStack Start + node:sqlite (no Express)
 
 3. **Design the technical architecture**:
    - File/folder structure
    - Data models and schema
-   - API endpoint specifications
+   - Server functions (`createServerFn`) for CRUD operations
    - Frontend routing and components
    - Data flow between components
 
@@ -41,7 +40,7 @@ Create/Update `specs/design.md` with:
 - High-level architecture document
 - Technology choices and reasoning
 - Database schema
-- API specification
+- Server functions specification (`createServerFn` for CRUD)
 - Frontend structure and routing
 - Phased implementation plan (6 phases)
 - Testing approach per phase
@@ -63,16 +62,15 @@ Create/Update `specs/design.md` with:
 ## Phased Approach (from implementationPlan.org)
 
 **Phase 1: Project scaffolding**
-- Setup TanStack Router + Vite project
-- Add Express dependency (node:sqlite is built-in, requires Node
-  22.5+)
-- Configure Vite proxy
-- Setup dev scripts
+- Scaffold TanStack Start project
+- Configure `app.config.ts`
+- Pin Node.js version (22.5+) in `.nvmrc`
+- Single `npm run dev` starts everything
 
-**Phase 2: Database + API**
-- Create DB schema
-- Build Express API with all CRUD endpoints
-- Test with curl
+**Phase 2: Database + Server Functions**
+- Create `src/lib/db.ts` with node:sqlite schema
+- Build server functions (`createServerFn`) for all CRUD operations
+- Test from a route loader
 
 **Phase 3: Book list page (Read)**
 - Wire list page with useQuery
@@ -96,10 +94,12 @@ Create/Update `specs/design.md` with:
 
 ## Technology Constraints
 
-- Frontend: TanStack Router + TanStack Query (no other frameworks)
-- Backend: Express + node:sqlite (Node.js built-in, experimental)
+- Framework: TanStack Start (full-stack, includes Router + Query)
+- Database: node:sqlite (Node.js built-in, experimental)
+- Server logic via `createServerFn` (no Express, no REST API)
 - All data persisted in single SQLite file
 - Requires Node.js 22.5+ (pin version via .nvmrc)
+- See ADR/0003-switch-to-tanstack-start.org for framework rationale
 
 Start by reading requirements.md, then create a comprehensive
 design.md that the Developer can follow to implement.

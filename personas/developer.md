@@ -16,7 +16,7 @@ create small git commits for each feature.
 
 2. **Implement features in phases**:
    - Phase 1: Project setup
-   - Phase 2: Database + Backend API
+   - Phase 2: Database + Server Functions
    - Phase 3: Book list page
    - Phase 4: Add book form
    - Phase 5: Edit + Delete books
@@ -30,16 +30,16 @@ create small git commits for each feature.
    - Commit with descriptive message
 
 4. **Frontend development**:
-   - Use TanStack Router file-based routing
+   - Use TanStack Start with file-based routing
    - Use TanStack Query for server state management
    - Write components with TypeScript
    - Test UI components and user flows
 
-5. **Backend development**:
-   - Express API with proper error handling
-   - Express route handlers for CRUD operations
-   - Test endpoints with curl or Postman
-   - Ensure proper database transactions
+5. **Server functions**:
+   - Use `createServerFn` for all CRUD operations (no Express)
+   - Input validation via `inputValidator`
+   - Server functions colocated with route files
+   - Ensure proper database transactions in `src/lib/db.ts`
 
 6. **Quality checks**:
    - Run tests for each feature
@@ -71,14 +71,11 @@ git merge phase-1-setup
 5. Commit
 
 **Files to create/modify**:
-- `server/db.ts` — Database connection via node:sqlite, schema
-  initialization, queries
-- `server/index.ts` — Express server, routes, middleware
-- `src/main.tsx` — App entry, QueryClient provider
-- `src/routes/*` — Router modules per page
+- `src/lib/db.ts` — Database connection via node:sqlite, schema, queries
+- `src/routes/*` — Route modules with colocated server functions
 - `src/components/*` — React components
+- `app.config.ts` — TanStack Start configuration
 - `package.json` — Dependencies and scripts
-- `vite.config.ts` — Vite and Router configuration
 
 ## Rules
 
@@ -112,20 +109,18 @@ git merge phase-1-setup
 - Cache strategies: invalidate queries when data changes
 - Use consistent naming conventions
 
-## The Tech Stack TanStack + Express
+## The Tech Stack — TanStack Start
 
-**Frontend**:
-- TanStack Router: File-based routing (`src/routes/*.tsx`)
-- TanStack Query: Server state (`useQuery`, `useMutation`)
-- Vite: Build tool and dev server
+**Framework**:
+- TanStack Start: Full-stack React framework (see ADR/0003)
+- TanStack Router: File-based routing (`src/routes/*.tsx`), built into Start
+- TanStack Query: Server state (`useQuery`, `useMutation`), built into Start
 
-**Backend**:
-- Express: Web framework and API routing
-- node:sqlite: Node.js built-in SQLite module (experimental, requires
-  Node 22.5+)
-- RESTful API: GET/POST/PUT/DELETE on `/api/books/*`
-- See ADR/0002-switch-to-node-sqlite.org for the database decision
-  rationale
+**Server logic**:
+- `createServerFn`: Server functions for CRUD — no Express, no REST API
+- `inputValidator`: Input validation on server functions
+- node:sqlite: Node.js built-in SQLite module (experimental, requires Node 22.5+)
+- See ADR/0002 for database rationale, ADR/0003 for framework rationale
 
 Don't assume anything — if you're unsure about a pattern, check the
 reference implementations or ask.

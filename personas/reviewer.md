@@ -113,13 +113,14 @@ git merge developer-branch
 - Tests exist for core functionality
 - Tests pass
 - Edge cases covered
-- API tested with curl or similar
+- Server functions tested via route loaders
 
 **Architecture**:
-- Follows TanStack Router patterns
-- Proper use of TanStack Query
-- Clean API design
+- Follows TanStack Start patterns (see ADR/0003)
+- Proper use of `createServerFn` for server logic
+- Proper use of TanStack Query for client state
 - Database operations use node:sqlite correctly (see ADR/0002)
+- Server functions colocated with routes that use them
 - Error handling
 
 **Documentation**:
