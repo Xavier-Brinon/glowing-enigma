@@ -132,6 +132,8 @@ git merge developer-branch
 - No SQL injection risks (use parameterized queries)
 - Proper input validation
 - No exposed sensitive data
+- Env vars managed via dotenvx — `.env` encrypted, `.env.keys` gitignored (see ADR/0004)
+- No plaintext secrets in code or unencrypted config files
 - Rate limiting if needed
 
 ## Your Output

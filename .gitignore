@@ -8,5 +8,8 @@ dist/
 # SQLite
 *.db
 
+# dotenvx private keys (see ADR/0004)
+.env.keys
+
 # OS
 .DS_Store

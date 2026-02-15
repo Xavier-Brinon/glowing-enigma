@@ -17,7 +17,8 @@ architecture decisions.
 2. **Review existing decisions**:
    - Database: node:sqlite (see ADR/0002-switch-to-node-sqlite.org)
    - Framework: TanStack Start (see ADR/0003-switch-to-tanstack-start.org)
-   - Tech stack: TanStack Start + node:sqlite (no Express)
+   - Env vars: dotenvx with encrypted .env files (see ADR/0004-dotenvx-for-env-vars.org)
+   - Tech stack: TanStack Start + node:sqlite + dotenvx (no Express)
 
 3. **Design the technical architecture**:
    - File/folder structure
@@ -65,7 +66,8 @@ Create/Update `specs/design.md` with:
 - Scaffold TanStack Start project
 - Configure `app.config.ts`
 - Pin Node.js version (22.5+) in `.nvmrc`
-- Single `npm run dev` starts everything
+- Setup dotenvx: install, set initial env vars, gitignore `.env.keys`
+- Single `npm run dev` starts everything (via `dotenvx run --`)
 
 **Phase 2: Database + Server Functions**
 - Create `src/lib/db.ts` with node:sqlite schema
@@ -98,8 +100,9 @@ Create/Update `specs/design.md` with:
 - Database: node:sqlite (Node.js built-in, experimental)
 - Server logic via `createServerFn` (no Express, no REST API)
 - All data persisted in single SQLite file
+- Env vars: dotenvx with encrypted `.env` files (see ADR/0004)
 - Requires Node.js 22.5+ (pin version via .nvmrc)
-- See ADR/0003-switch-to-tanstack-start.org for framework rationale
+- See ADR/0003 for framework rationale, ADR/0004 for env var rationale
 
 Start by reading requirements.md, then create a comprehensive
 design.md that the Developer can follow to implement.

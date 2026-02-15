@@ -108,7 +108,9 @@ Create the four personnas, taking into account the kind of app we're
 building as detailled in implementationPlan.org
 #+end_quote
 
-Changed the teck stack to the full TanStack Router; creating ADR.
+Changed the tech stack to the full TanStack Router; creating ADR.
+
+Changed the tech stack to include dotenvx as well; creating ADR.
 
 * Footnotes
 

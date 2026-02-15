@@ -1,0 +1,161 @@
+#+title: Use dotenvx for Environment Variables and Secrets
+#+author: HaQadosch
+#+date: [2026-02-15 Sun]
+#+startup: indent
+* Status
+
+Accepted
+
+* Context and Problem Statement
+
+The Book Tracker app will need environment variables for configuration
+— at minimum a database file path, and potentially API keys or feature
+flags as the project grows. TanStack Start supports environment
+variables via =process.env= in server functions and =import.meta.env=
+on the client (prefixed with =VITE_=).
+
+The standard approach is a =.env= file managed by the =dotenv= npm
+package, but this has known pain points:
+- =.env= files contain secrets and *must* be gitignored
+- No way to share secrets with collaborators or across machines safely
+- Multiple environments (dev, production) require manual file swapping
+- No encryption — secrets sit in plaintext on disk
+
+[[https://dotenvx.com][dotenvx]] is a drop-in replacement that adds *encryption* to =.env=
+files using public-key cryptography, making encrypted =.env= files
+safe to commit to git.
+
+* Options Considered
+
+** dotenv (standard)
+
+Pros:
+- De facto standard for Node.js projects
+- Zero learning curve — widely understood
+- Built into many frameworks (including Vite/TanStack Start)
+
+Cons:
+- No encryption — secrets in plaintext on disk
+- =.env= must be gitignored — no version history for config
+- Sharing secrets between machines requires out-of-band transfer
+- Multiple environments need manual =.env.local= / =.env.production=
+  juggling
+
+** dotenvx
+
+Pros:
+- Drop-in replacement for dotenv — same =.env= file format
+- Encrypts values using secp256k1 public-key cryptography
+- Encrypted =.env= files are safe to commit to git
+- Built-in multi-environment support (=.env.development=,
+  =.env.production=) via =-f= flag
+- Cross-platform — works on any OS and runtime
+- Simple CLI: =dotenvx run=, =dotenvx set=, =dotenvx encrypt=
+- Private keys isolated in =.env.keys= (single file to protect)
+- Decryption at runtime via =.env.keys= or =DOTENV_PRIVATE_KEY_*=
+  environment variable
+
+Cons:
+- Additional CLI dependency (installed globally or via npx)
+- Less mainstream than dotenv — smaller community
+- Encryption adds a step to the workflow (=dotenvx set= instead of
+  editing =.env= directly)
+- Private key management is the developer's responsibility
+
+** Vault / secrets manager (e.g. HashiCorp Vault, AWS SSM)
+
+Pros:
+- Enterprise-grade secret management
+- Audit trails, access control, rotation
+
+Cons:
+- Massive overkill for a personal local app
+- Requires infrastructure setup
+- Adds operational complexity
+
+* Decision
+
+Use [[https://dotenvx.com][dotenvx]] for environment variable and secret management.
+
+** Good Habits from Day One
+Even though this is a personal app today, using encrypted environment
+variables establishes a secure-by-default workflow. Secrets never sit
+in plaintext in the repo — not even accidentally.
+
+** Encrypted .env Files in Git
+With dotenvx, =.env= files are encrypted and committed to the
+repository. This means:
+- Configuration is version-controlled alongside code
+- No more "can you send me the .env file?" messages
+- Environment setup on a new machine is =git clone= + provide the
+  private key
+
+** Simple Multi-Environment Support
+=dotenvx run -f .env.production -- npm run dev= loads a specific
+environment without renaming files or using fragile =.env.local=
+overrides.
+
+** Minimal Workflow Change
+The day-to-day workflow changes only slightly:
+- =dotenvx set KEY value= instead of editing =.env= by hand
+- =dotenvx run -- npm run dev= instead of =npm run dev=
+- =.env.keys= added to =.gitignore= instead of =.env=
+
+** Learning Opportunity
+Consistent with [[file:0002-switch-to-node-sqlite.org][ADR 0002]] and [[file:0003-switch-to-tanstack-start.org][ADR 0003]], this project prioritises
+learning. Understanding encrypted env workflows is valuable for any
+future project, personal or professional.
+
+* Consequences
+
+** Positive
+
+- Secrets are encrypted at rest — no plaintext secrets in the repo
+- =.env= files can be safely committed to git
+- Multi-environment support without file-swapping hacks
+- Establishes secure habits transferable to production projects
+- Single file to protect (=.env.keys=) instead of multiple =.env*=
+
+** Negative
+
+- Extra CLI tool to install (=dotenvx=)
+- =dotenvx run= wrapper needed to start the app
+- =.env.keys= file must be kept safe — losing it means re-encrypting
+- Slightly more friction when adding/changing env vars
+
+** Mitigation
+
+- Add =dotenvx run --= prefix to =npm run dev= script in
+  =package.json= so the wrapper is transparent
+- Add =.env.keys= to =.gitignore= immediately
+- Back up =.env.keys= outside the repo (e.g. password manager)
+- The CLI is a single binary — no heavy dependency tree
+
+* Impact on Project Setup
+
+Changes to the development workflow:
+
+#+begin_src shell
+  # Install dotenvx
+  npm install @dotenvx/dotenvx --save-dev
+
+  # Set an environment variable (encrypts automatically)
+  npx dotenvx set DATABASE_PATH ./books.db
+
+  # Run the app with decrypted env vars
+  npx dotenvx run -- npm run dev
+#+end_src
+
+Files affected:
+- =.gitignore= :: add =.env.keys=, remove =*.env= patterns (encrypted
+  =.env= files are now safe to commit)
+- =package.json= :: update =dev= script to use =dotenvx run --=
+  prefix
+- =.env= :: encrypted environment variables (committed)
+- =.env.keys= :: private decryption keys (gitignored)
+
+* References
+
+- [[https://dotenvx.com/docs/quickstart][dotenvx quickstart documentation]]
+- [[https://dotenvx.com][dotenvx homepage]]
+- [[file:0003-switch-to-tanstack-start.org][ADR 0003 — TanStack Start (framework context)]]

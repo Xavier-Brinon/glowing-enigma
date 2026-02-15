@@ -17,6 +17,7 @@ Tech stack:
 - TanStack Router (built into Start)
 - TanStack Query (built into Start)
 - ~node:sqlite~ (see [[file:ADR/0002-switch-to-node-sqlite.org][ADR 0002]])
+- dotenvx for env vars and secrets (see [[file:ADR/0004-dotenvx-for-env-vars.org][ADR 0004]])
 
 all running locally, single process.
 
@@ -37,6 +38,8 @@ book-tracker/
 │   └── lib/
 │       └── db.ts               # node:sqlite setup, schema, queries
 ├── app.config.ts               # TanStack Start config
+├── .env                        # Encrypted env vars (committed)
+├── .env.keys                   # Private decryption keys (gitignored)
 ├── package.json
 └── tsconfig.json
 #+end_src
@@ -84,6 +87,10 @@ components. TanStack Start handles the RPC transport.
 - Scaffold TanStack Start project
 - Configure =app.config.ts=
 - Pin Node.js version (22.5+) in =.nvmrc=
+- Install dotenvx (=npm install @dotenvx/dotenvx --save-dev=)
+- Set initial env vars (=npx dotenvx set DATABASE_PATH ./books.db=)
+- Add =.env.keys= to =.gitignore=
+- Update =dev= script to use =dotenvx run --= prefix
 - Single =npm run dev= starts everything
 
 *** Phase 2: Database + Server Functions
@@ -116,11 +123,18 @@ components. TanStack Start handles the RPC transport.
   # Install dependencies
   npm install
 
-  # Run both frontend and API server
+  # Run the app (dotenvx decrypts env vars automatically via dev script)
   npm run dev
 #+end_src
 
-App runs on =http://localhost:3000= (single process, no separate API server).
+The =dev= script wraps =dotenvx run --= so env vars are decrypted
+transparently. App runs on =http://localhost:3000= (single process, no
+separate API server).
+
+To add or change an env var:
+#+begin_src shell
+  npx dotenvx set KEY value
+#+end_src
 
 ** Verification
 

@@ -75,6 +75,8 @@ git merge phase-1-setup
 - `src/routes/*` — Route modules with colocated server functions
 - `src/components/*` — React components
 - `app.config.ts` — TanStack Start configuration
+- `.env` — Encrypted environment variables (committed to git)
+- `.env.keys` — Private decryption keys (gitignored, never committed)
 - `package.json` — Dependencies and scripts
 
 ## Rules
@@ -121,6 +123,12 @@ git merge phase-1-setup
 - `inputValidator`: Input validation on server functions
 - node:sqlite: Node.js built-in SQLite module (experimental, requires Node 22.5+)
 - See ADR/0002 for database rationale, ADR/0003 for framework rationale
+
+**Environment variables**:
+- dotenvx: Encrypted env var management (see ADR/0004)
+- Use `npx dotenvx set KEY value` to add/change env vars (never edit `.env` by hand)
+- `dev` script uses `dotenvx run --` prefix for transparent decryption
+- `.env` is committed (encrypted), `.env.keys` is gitignored (private keys)
 
 Don't assume anything — if you're unsure about a pattern, check the
 reference implementations or ask.
