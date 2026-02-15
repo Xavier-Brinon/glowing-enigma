@@ -1,0 +1,85 @@
+#+title: Switch from better-sqlite3 to node:sqlite
+#+author: HaQadosch
+#+date: [2026-02-15 Sun]
+#+startup: indent
+* Status
+
+Accepted — supersedes [[file:0001-database-selection.org][ADR 0001]]
+
+* Context and Problem Statement
+
+[[file:0001-database-selection.org][ADR 0001]] selected better-sqlite3 as the database library for the Book
+Tracker API. That decision optimised for production-readiness and
+stability.
+
+However, the primary goal of this project is *learning*. The Book
+Tracker is a personal, low-stakes application — an ideal environment
+to explore new platform APIs without production consequences. Node.js
+22.5+ ships a built-in =node:sqlite= module (experimental, stability
+index 1) that provides a synchronous API similar to better-sqlite3 but
+with zero external dependencies.
+
+The question: should we trade the stability of better-sqlite3 for the
+learning value of =node:sqlite=?
+
+* Decision
+
+Switch from better-sqlite3 to [[https://nodejs.org/docs/latest/api/sqlite.html][node:sqlite]] (Node.js built-in module).
+
+The decision was made because:
+
+** Learning Opportunity
+This personal project is an ideal low-stakes environment to learn the
+=node:sqlite= API before it stabilises. Hands-on experience with an
+experimental API builds understanding that reading docs alone cannot.
+
+** Zero Dependencies
+No native addon compilation, no =node-gyp=, no extra packages. The
+database layer is built into the runtime.
+
+** API Similarity
+=node:sqlite= has a synchronous API similar to better-sqlite3. The
+mental model carries over — the migration cost is low and the patterns
+learned are transferable.
+
+** Future Investment
+=node:sqlite= is the direction Node.js is heading. Learning it now
+means less migration effort later when it reaches stable status.
+
+** Reversibility
+Both libraries share synchronous semantics. All database calls are
+isolated in =server/db.ts=. If =node:sqlite= proves too unstable,
+reverting to better-sqlite3 means changing one file.
+
+* Consequences
+
+** Positive
+
+- Zero external dependencies for the database layer
+- Hands-on learning of a Node.js built-in API
+- Synchronous API keeps code simple and readable
+- No native addon compilation issues across platforms
+- Early familiarity with what will become a Node.js standard
+
+** Negative
+
+- Experimental API — may break between Node.js minor versions
+- Limited TypeScript types (=@types/node= may lag behind API changes)
+- Fewer community examples and Stack Overflow answers
+- Requires Node.js 22.5+ (constrains the runtime version)
+
+** Mitigation
+
+- Pin the Node.js version (e.g. via =.nvmrc= or =.node-version=) to
+  avoid surprise breakage on upgrades
+- The data access layer is isolated in =server/db.ts= — if the API
+  changes or proves too unstable, swapping to better-sqlite3 requires
+  changing only that one file
+- This is a personal local app, not a production service — occasional
+  breakage is an acceptable learning cost
+
+* References
+
+- [[https://nodejs.org/docs/latest/api/sqlite.html][Node.js sqlite documentation]]
+- [[file:0001-database-selection.org][ADR 0001 — Database Selection for Book Tracker API (superseded)]]
+- [[https://github.com/WiseLibs/better-sqlite3][better-sqlite3 (fallback option)]]

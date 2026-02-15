@@ -1,0 +1,137 @@
+#+title: Database Selection for Book Tracker API
+#+author: HaQadosch
+#+date: [2026-02-15 Sun]
+#+startup: indent
+* Status
+
+Superseded by [[file:0002-switch-to-node-sqlite.org][ADR 0002]]
+
+* Context and Problem Statement
+
+The Book Tracker API needs a local database for persistent storage of
+book data. The application is a simple CRUD application where each
+book entry contains: title, author, how it was heard about
+(heard_from), expectations for reading it (expectations), and a status
+field (to-read, reading, done). All of these values are stored as
+text.
+
+The constraints are:
+- Must run locally
+- Must be synchronous or work seamlessly with Express/Node async code
+- Must be a single local file for simplicity
+- Must be simple to set up and maintain
+
+* Options Considered
+
+**node:sqlite — Node.js built-in module (experimental, Node 22.5+)**
+
+Pros:
+- Built into Node.js runtime (no external dependencies)
+- Synchronous API, similar in style to better-sqlite3
+- Official Node.js project, will gain long-term support
+
+Cons:
+- Experimental / unstable — API may change between Node versions
+- Limited documentation and community examples compared to mature libraries
+- Requires Node.js 22.5 or later
+
+**sqlite3 — npm package (TryGhost/node-sqlite3)**
+
+Pros:
+- Mature, widely used in the npm ecosystem
+- Large community and many tutorials available
+- Async callback-based API fits Node.js streaming patterns
+
+Cons:
+- Callback-based API is verbose; requires promise wrappers for async/await
+- Heavier native build step (node-gyp, Python dependency)
+- More boilerplate for simple CRUD operations
+
+**better-sqlite3**
+
+Pros:
+- Synchronous API — simpler code, no callbacks or promise chains
+- Best-in-class performance for single-user / low-concurrency workloads
+- Excellent TypeScript support with generics
+- Built-in transaction support with automatic rollback on error
+- Clean, modern API design
+
+Cons:
+- External dependency (native addon, requires compilation)
+- Synchronous calls block the event loop (not suitable for
+  high-concurrency servers)
+- Not built into Node.js runtime
+
+* Decision
+
+Use [[https://github.com/WiseLibs/better-sqlite3][better-sqlite3]]
+
+The decision was made because:
+
+1. **Simplicity and Readability**: The synchronous API eliminates
+   callback hell and makes the code much easier to read and maintain.
+   For a simple todo-like application with low concurrency, this is
+   the ideal choice.
+
+2. **Performance**: For the use case (persisting text fields, minimal
+   query complexity), better-sqlite3 provides excellent performance
+   with less CPU overhead compared to the async callbacks.
+
+3. **Type Safety**: The library provides excellent TypeScript support,
+   which helps catch errors at compile time rather than runtime.
+
+4. **Local Development Focus**: Since this is a personal project and
+   likely to have minimal users, the synchronous nature doesn't pose a
+   real issue.
+
+5. **Future-Proofing**: While synchronous access has limitations at
+   scale, the codebase can be refactored to use an async approach
+   (like sqlite3 promises) if the application grows beyond the simple
+   personal use case.
+
+**Why not node:sqlite?**
+
+The built-in =node:sqlite= module has an appealing zero-dependency
+story, but it is still marked experimental (stability index 1). For a
+project we want to run reliably day-to-day, depending on an unstable
+API is a risk. If =node:sqlite= stabilises in a future Node LTS,
+migrating from better-sqlite3 would be straightforward since both use
+synchronous APIs.
+
+**Why not sqlite3 (npm)?**
+
+The =sqlite3= npm package uses a callback-based API. Wrapping every
+call in promises to get async/await adds boilerplate that
+better-sqlite3 avoids entirely. For a single-user local app, the async
+model provides no concurrency benefit — it only adds complexity.
+
+* Consequences
+
+**Positive**
+
+- Simpler, more readable code with synchronous API
+- Better developer experience with TypeScript support
+- Excellent performance for simple query operations
+- No callback hell or promise chaining complexity
+
+**Negative**
+
+- External library dependency (added to package.json)
+- Synchronous operation blocks the event loop (minor issue for this
+  use case)
+
+**Mitigations**
+
+- The external dependency is trivial to manage (single package,
+  well-maintained)
+- The project is intended for personal use, not high-traffic
+  production
+- The data access layer is isolated in =server/db.ts= — swapping
+  libraries requires changing only that one file
+
+* References
+
+- [[https://github.com/WiseLibs/better-sqlite3][better-sqlite3 GitHub repository]]
+- [[https://github.com/WiseLibs/better-sqlite3#readme][better-sqlite3 README documentation]]
+- [[https://github.com/WiseLibs/better-sqlite3/blob/HEAD/docs/api.md][better-sqlite3 API documentation]]
+- [[https://nodejs.org/docs/latest/api/sqlite.html][Node.js sqlite documentation]]

@@ -1,0 +1,12 @@
+# Claude Code
+.claude/
+
+# Node.js
+node_modules/
+dist/
+
+# SQLite
+*.db
+
+# OS
+.DS_Store
