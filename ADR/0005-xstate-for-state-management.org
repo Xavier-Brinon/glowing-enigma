@@ -1,0 +1,190 @@
+#+title: Integrate XState for State Management
+#+author: HaQadosch
+#+date: [2026-02-16 Sun]
+#+startup: indent
+* Status
+
+Accepted
+
+* Context and Problem Statement
+
+The Book Tracker app has state that goes beyond simple CRUD data
+fetching. A book's lifecycle follows a defined flow:
+
+: to-read → reading → done
+
+This is a state machine. Today the =status= field is a plain string
+that any code path can set to any value — there is no enforcement that
+transitions follow the allowed flow, and no central place that defines
+what transitions are valid.
+
+As the app grows (e.g. adding "on-hold", "abandoned", or
+"re-reading" statuses, or introducing multi-step forms), managing
+state transitions with ad-hoc =if/else= becomes fragile and hard to
+reason about.
+
+[[https://stately.ai/docs/xstate][XState]] is a state management and orchestration library for JavaScript
+and TypeScript that models logic as *state machines, statecharts, and
+actors*. It makes state transitions explicit, predictable, and visual.
+
+* Options Considered
+
+** Plain state (current approach)
+
+Pros:
+- Zero dependencies — status is just a string
+- Simple to understand for a 3-state flow
+- No learning curve
+
+Cons:
+- No enforcement of valid transitions (any code can set any status)
+- Business logic scattered across components and server functions
+- Adding new states or transition rules requires touching multiple
+  files
+- No visualisation of the state flow
+- Impossible to answer "what can happen from this state?" without
+  reading all the code
+
+** XState
+
+Pros:
+- State transitions are *explicit and exhaustive* — every valid
+  transition is defined in one place
+- Invalid transitions are impossible by construction
+- Visual editor ([[https://stately.ai/editor][Stately editor]]) for designing and debugging flows
+- Actor model for independent concurrent state (e.g. form state, book
+  lifecycle)
+- Integrates with React via =@xstate/react= (=useMachine=, =useActor=)
+- Works on both client and server (can model server-side workflows)
+- Guards for conditional transitions, actions for side effects
+- TypeScript-first — full type safety on states, events, and context
+- Aligns with the style guide's "simple control flow" and "safety"
+  principles — state machines /are/ simple, explicit control flow
+
+Cons:
+- Additional dependency (=xstate= + =@xstate/react=)
+- Learning curve for state machine / statechart concepts
+- Overkill for trivially simple state (a single boolean toggle)
+- Machine definitions are verbose compared to a plain =useState=
+
+** Zustand / Jotai / Redux
+
+Pros:
+- Popular React state management libraries
+- Large community, many examples
+
+Cons:
+- Manage /state values/, not /state transitions/ — they don't model
+  "what transitions are valid from this state"
+- Same enforcement gap as plain state: any code can dispatch any
+  action
+- Don't solve the core problem (lifecycle correctness)
+
+* Decision
+
+Integrate [[https://stately.ai/docs/xstate][XState]] (=xstate= + =@xstate/react=) into the tech stack.
+
+** Explicit State Machines Match the Domain
+A book's lifecycle (/to-read → reading → done/) is literally a state
+machine. Using XState to model it means the code /is/ the secification
+— there's no gap between "what transitions should be allowed" and
+"what transitions are allowed."
+
+** Safety Through Construction
+Invalid transitions become impossible, not just unlikely. This aligns
+with the style guide's safety-first design goal and Tiger Style's
+principle of making bugs structurally impossible rather than relying
+on discipline.
+
+** Single Source of Truth for Business Logic
+The machine definition is the one place that answers: "what states
+exist?", "what events can happen?", "what transitions are valid?",
+"what side effects run on each transition?" No more scattered
+=if/else= chains.
+
+** Visual Development
+The [[https://stately.ai/editor][Stately visual editor]] and VS Code extension let you see and edit
+the state flow graphically. This is valuable for a learning project —
+you can /see/ the machine, not just read it.
+
+** Learning Opportunity
+Consistent with [[file:0002-switch-to-node-sqlite.org][ADR 0002]], [[file:0003-switch-to-tanstack-start.org][ADR 0003]], and [[file:0004-dotenvx-for-env-vars.org][ADR 0004]], this project
+prioritises learning. State machines and the actor model are
+transferable concepts that apply far beyond this app.
+
+** Scope
+Start small — model the book status lifecycle as a machine. Don't
+model everything as a machine. Plain =useState= is fine for trivially
+simple UI state (e.g. "is the modal open?"). Use XState where state
+has *defined transitions between named states*.
+
+* Consequences
+
+** Positive
+
+- Book status transitions are explicit, exhaustive, and type-safe
+- Invalid transitions are impossible by construction
+- Business logic centralised in machine definitions
+- Visual tooling for designing and debugging state flows
+- Transferable knowledge (state machines, actor model)
+- Aligns with style guide: simple control flow, safety first
+
+** Negative
+
+- Two new dependencies (=xstate=, =@xstate/react=)
+- Learning curve for statechart concepts (states, events, guards,
+  actions, actors)
+- Machine definitions are more verbose than a plain string =status=
+- Team must learn when to use XState vs plain =useState=
+
+** Mitigation
+
+- Start with a single machine (book status lifecycle) — don't
+  over-apply
+- Use the Stately visual editor to lower the learning curve
+- The machine definition is a plain TypeScript object — no lock-in,
+  easy to read even without XState knowledge
+- If XState proves too heavy, extracting the machine back to plain
+  =if/else= is a mechanical refactor — the state names and transitions
+  are already documented in the machine definition
+
+* Impact on Architecture
+
+New file:
+
+#+begin_src shell
+  src/
+  └── machines/
+      └── bookStatusMachine.ts   # Book lifecycle state machine
+#+end_src
+
+The machine defines:
+- States :: =toRead=, =reading=, =done=
+- Events :: =START_READING=, =FINISH=, =RESET=
+- Context :: book metadata passed through transitions
+- Guards :: optional conditions on transitions (e.g. can only finish
+  if started)
+
+Usage in components via =@xstate/react=:
+
+#+begin_src javascript
+  import { useMachine } from '@xstate/react'
+  import { bookStatusMachine } from '../machines/bookStatusMachine'
+
+  function BookCard({ book }: { book: Book }) {
+    const [state, send] = useMachine(bookStatusMachine, {
+      input: { status: book.status },
+    })
+
+    // state.value is the current status.
+    // send({ type: 'START_READING' }) triggers a transition.
+    // Invalid events for the current state are no-ops.
+  }
+#+end_src
+
+* References
+
+- [[https://stately.ai/docs/xstate][XState documentation]]
+- [[https://stately.ai/editor][Stately visual editor]]
+- [[https://stately.ai/docs/xstate-react][XState React integration (@xstate/react)]]
+- [[https://stately.ai/docs/state-machines-and-statecharts][State machines and statecharts introduction]]

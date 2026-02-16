@@ -31,3 +31,12 @@ The Developer/Reviewer loop repeats until the Reviewer is satisfied, then the br
 - **Small increments**: one git branch per task, smallest possible changes
 - **Heavily commented code**: all code should be documented
 - **Context management**: monitor token usage with `/context`; restart session if exceeding ~100,000 tokens
+- **Style guide**: follow `STYLE_GUIDE.org` (adapted from TigerBeetle's TIGER_STYLE.md) — key rules:
+  - Functions: pure leaf functions, push ifs up / fors down, simple return types
+  - Types: strict TypeScript, no `any`, explicit function signatures
+  - Errors: never swallow silently, validate at boundaries
+  - Names: meaningful, never abbreviated, units as suffix (`latencyMs`)
+  - Comments: explain *why*, not *what*; sentences with full stops
+  - Formatting: delegated to Prettier
+  - State: XState for entity lifecycles (book status), plain `useState` for trivial UI only
+  - Simplicity: no premature abstractions, no duplicated state, zero technical debt

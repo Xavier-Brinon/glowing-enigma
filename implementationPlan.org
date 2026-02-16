@@ -18,6 +18,7 @@ Tech stack:
 - TanStack Query (built into Start)
 - ~node:sqlite~ (see [[file:ADR/0002-switch-to-node-sqlite.org][ADR 0002]])
 - dotenvx for env vars and secrets (see [[file:ADR/0004-dotenvx-for-env-vars.org][ADR 0004]])
+- XState for state management (see [[file:ADR/0005-xstate-for-state-management.org][ADR 0005]])
 
 all running locally, single process.
 
@@ -35,8 +36,10 @@ book-tracker/
 │   ├── components/
 │   │   ├── BookCard.tsx        # Single book display card
 │   │   └── BookForm.tsx        # Reusable form (add + edit)
-│   └── lib/
-│       └── db.ts               # node:sqlite setup, schema, queries
+│   ├── lib/
+│   │   └── db.ts               # node:sqlite setup, schema, queries
+│   └── machines/
+│       └── bookStatusMachine.ts # Book lifecycle state machine (XState)
 ├── app.config.ts               # TanStack Start config
 ├── .env                        # Encrypted env vars (committed)
 ├── .env.keys                   # Private decryption keys (gitignored)
@@ -93,9 +96,13 @@ components. TanStack Start handles the RPC transport.
 - Update =dev= script to use =dotenvx run --= prefix
 - Single =npm run dev= starts everything
 
-*** Phase 2: Database + Server Functions
+*** Phase 2: Database + Server Functions + State Machine
 - Create =src/lib/db.ts= :: initialize ~node:sqlite~, create *books* table
+- Create =src/machines/bookStatusMachine.ts= :: XState machine for
+  book lifecycle (=toRead= → =reading= → =done=)
 - Create server functions (=createServerFn=) for all CRUD operations
+- Status transitions go through the XState machine, not ad-hoc string
+  assignment
 - Test server functions from a route loader
 
 *** Phase 3: Book list page (Read)
@@ -114,7 +121,8 @@ components. TanStack Start handles the RPC transport.
 - Both use `useMutation` and invalidate queries on success
 
 *** Phase 6: Polish
-- Quick status toggle (click to cycle `to-read` → `reading` → `done`) on the list
+- Status toggle on the list uses XState =send()= — only valid
+  transitions are possible
 - Basic styling (clean, minimal CSS)
 - Empty state when no books exist
 

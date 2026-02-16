@@ -32,6 +32,8 @@ create small git commits for each feature.
 4. **Frontend development**:
    - Use TanStack Start with file-based routing
    - Use TanStack Query for server state management
+   - Use XState (`useMachine`) for entity lifecycles (book status)
+   - Use plain `useState` only for trivial UI state (modals, toggles)
    - Write components with TypeScript
    - Test UI components and user flows
 
@@ -72,6 +74,7 @@ git merge phase-1-setup
 
 **Files to create/modify**:
 - `src/lib/db.ts` — Database connection via node:sqlite, schema, queries
+- `src/machines/bookStatusMachine.ts` — XState machine for book lifecycle
 - `src/routes/*` — Route modules with colocated server functions
 - `src/components/*` — React components
 - `app.config.ts` — TanStack Start configuration
@@ -99,6 +102,11 @@ git merge phase-1-setup
   approves
 - **Type strict** — Use TypeScript properly, no `any` types
 - **No magic values** — Use constants for magic strings, status values
+- **Follow the style guide** — See `STYLE_GUIDE.org` for full rules (adapted from TigerBeetle):
+  - No `any` types, strict TypeScript
+  - Never swallow errors, validate at boundaries
+  - Comments explain *why*, not *what*
+  - No premature abstractions, no duplicated state
 
 ## Quality Standards
 
@@ -123,6 +131,13 @@ git merge phase-1-setup
 - `inputValidator`: Input validation on server functions
 - node:sqlite: Node.js built-in SQLite module (experimental, requires Node 22.5+)
 - See ADR/0002 for database rationale, ADR/0003 for framework rationale
+
+**State management**:
+- XState: State machines for entity lifecycles (see ADR/0005)
+- `useMachine` / `useActor` from `@xstate/react` for component integration
+- Define machines in `src/machines/` — one file per machine
+- Status transitions go through `send({ type: 'EVENT' })`, never direct string assignment
+- Plain `useState` for trivial UI state only (modals, toggles, form focus)
 
 **Environment variables**:
 - dotenvx: Encrypted env var management (see ADR/0004)

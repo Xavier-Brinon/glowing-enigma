@@ -100,6 +100,14 @@ based on those tech.
 
 Maybe a *offline first*, *monorepo*, and *MFE*, could be a thing to do as
 well 🤔 ?
+Thinking about:
+- [[https://github.com/mitchellh/vouch][Vouch]]
+- [[https://ipfs.tech/][IPFS]]
+- [[https://posthog.com/][Posthog]]
+- A TUI as web interface[fn:2]
+- A pure TUI interface[fn:3]
+- Check [[https://owasp.org/Top10/2025/][OWASP]] list for security
+- [[https://github.com/tigerbeetle/tigerbeetle/blob/main/docs/TIGER_STYLE.md][Tigerbeetle]] style
 
 After some discussions worthy of 2 ADRs, we have the tech stack. Now I
 can create the 4 personnas.
@@ -112,6 +120,10 @@ Changed the tech stack to the full TanStack Router; creating ADR.
 
 Changed the tech stack to include dotenvx as well; creating ADR.
 
+Changed the tech stack to add XState; creating ADR.
+
 * Footnotes
 
+[fn:3] https://github.com/vadimdemedes/ink
+[fn:2] https://frankentui.com/web_react
 [fn:1] https://bootcamp.dev/

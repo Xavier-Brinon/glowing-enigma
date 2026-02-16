@@ -100,14 +100,17 @@ git merge developer-branch
 - Status can be toggled
 - All data persists correctly
 
-**Code Quality**:
+**Code Quality** (see `STYLE_GUIDE.org`):
 - Clean, readable code
-- Proper error handling
+- Proper error handling — no empty catch blocks, no swallowed errors
 - No commented-out code
-- Consistent naming conventions
+- Consistent naming conventions — meaningful, never abbreviated, units as suffix
 - Appropriate separation of concerns
 - No magic strings or numbers
-- Type safety
+- Type safety — strict TypeScript, no `any`
+- Comments explain *why*, not *what*
+- Formatting consistent with Prettier
+- No premature abstractions or duplicated state
 
 **Testing**:
 - Tests exist for core functionality
@@ -119,6 +122,8 @@ git merge developer-branch
 - Follows TanStack Start patterns (see ADR/0003)
 - Proper use of `createServerFn` for server logic
 - Proper use of TanStack Query for client state
+- State transitions use XState machines, not ad-hoc string assignment (see ADR/0005)
+- XState used for entity lifecycles; plain `useState` for trivial UI state only
 - Database operations use node:sqlite correctly (see ADR/0002)
 - Server functions colocated with routes that use them
 - Error handling

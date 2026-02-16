@@ -1,0 +1,284 @@
+#+title: Book Tracker Style Guide
+#+author: HaQadosch
+#+date: [2026-02-16 Sun]
+#+startup: indent
+
+Adapted from [[https://github.com/tigerbeetle/tigerbeetle/blob/main/docs/TIGER_STYLE.md][TigerBeetle's TIGER_STYLE.md]]. Rules are filtered for
+relevance to a TypeScript / TanStack Start / node:sqlite web
+application. Each section notes what was kept, adapted, or dropped
+from the original.
+
+* Design Goals (in priority order)
+
+1. *Safety* — correct behaviour, no data loss, no silent failures
+2. *Simplicity* — the least code that solves the problem
+3. *Developer experience* — readable, greppable, easy to change
+
+#+begin_quote
+"Simplicity and elegance are unpopular because they require hard work
+and discipline to achieve." — Edsger Dijkstra
+#+end_quote
+
+Simplicity is the hardest revision, not the first attempt. Spend
+mental energy upfront on design — implementation, testing, and
+maintenance costs dwarf it.
+
+* Zero Technical Debt
+
+Solve problems correctly the first time. Code is cheapest to change
+while "hot" — problems caught in design or implementation are far
+cheaper than production fixes.
+
+Ship solid code with met design goals. This enables steady incremental
+progress with confidence.
+
+* Safety
+
+** Simple Control Flow
+
+- Use only simple, explicit control flow
+- Avoid deeply nested callbacks or promise chains
+- Prefer early returns over deep nesting
+- Avoid recursion unless the data structure is inherently recursive
+  (e.g. tree traversal)
+
+#+begin_quote
+Tiger Style: "Use only very simple, explicit control flow for
+clarity."
+#+end_quote
+
+** Type Safety
+
+- Enable TypeScript =strict= mode — no exceptions[fn:1]
+- No =any= types — use =unknown= + type guards when the type is truly
+  unknown
+- Prefer explicit types on function signatures (parameters and return)
+- Let TypeScript infer local variable types where the inference is
+  obvious
+
+#+begin_quote
+Tiger Style adapted: the original requires explicitly-sized types
+(=u32=). In TypeScript, the equivalent discipline is strict mode and
+avoiding =any=.
+#+end_quote
+
+** All Errors Must Be Handled
+
+- Never swallow errors silently (no empty =catch= blocks)
+- Server functions: return structured error responses, don't let
+  exceptions bubble unhandled
+- Database operations: wrap in try/catch, log and surface the error
+- UI: show error states to the user, never fail silently
+
+#+begin_quote
+Tiger Style: "92% of catastrophic failures in distributed systems
+result from incorrect non-fatal error handling."
+#+end_quote
+
+** Variable Scope
+
+- Declare variables at the smallest possible scope
+- Prefer =const= by default; use =let= only when reassignment is
+  needed
+- Never use =var=
+
+** Input Validation
+
+- Validate at system boundaries: user input, URL parameters, server
+  function inputs
+- Use =inputValidator= on all =createServerFn= definitions
+- Trust internal code — don't re-validate data flowing between
+  internal functions
+
+#+begin_quote
+Tiger Style adapted: the original calls for assertions on all function
+arguments. For a web app, validate at boundaries; trust internal flow.
+#+end_quote
+
+* Simplicity
+
+** Function Shape
+
+- /Push ifs up and fors down/ — centralise branching in parent
+  functions, push iteration into helpers
+- Centralise control flow in the parent; move non-branchy logic to
+  helpers
+- Keep leaf functions *pure* (no side effects, deterministic output)
+- Prefer simple return types: =void= > =boolean= > =T= > =T | null=
+  > =T | Error=
+
+** Minimal Abstractions
+
+- Don't create helpers, utilities, or abstractions for one-time
+  operations
+- Three similar lines of code is better than a premature abstraction
+- Every abstraction carries a cost — it must justify itself by being
+  used in at least three places
+
+#+begin_quote
+Tiger Style: "Use only minimal, excellent abstractions."
+#+end_quote
+
+** No Duplication of State
+
+- Don't duplicate variables or create aliases for the same data
+- Derive computed values rather than caching them in a second variable
+- Calculate/check values close to where they are used — don't
+  introduce variables before needed
+
+#+begin_quote
+Tiger Style: "Don't duplicate variables or take aliases — reduces
+state sync failure probability."
+#+end_quote
+
+* Naming
+
+** General Principles
+
+- Take time to find the right name — great names capture what things
+  /are/ or /do/
+- Never abbreviate variable names (exception: loop index =i=, =j= for
+  trivial iteration)
+- Nouns for data, verbs for functions
+- Names should read well in code /and/ in conversation
+
+#+begin_quote
+Tiger Style: "Get nouns and verbs just right. Great names capture what
+things are or do."
+#+end_quote
+
+** Conventions
+
+- =camelCase= for variables, functions, and component props (standard
+  TypeScript/React)
+- =PascalCase= for components, types, and interfaces
+- =UPPER_SNAKE_CASE= for constants and enum-like values
+- =snake_case= for database column names (SQL convention)
+- File names: =kebab-case= for routes (TanStack convention),
+  =PascalCase= for components
+
+** Units and Qualifiers
+
+Add units or qualifiers to variable names, placed last, sorted by
+descending significance:
+
+#+begin_src javascript
+  // Good — qualifier last, groups related variables
+  const latencyMs = 150
+  const latencyMsMax = 500
+  const timeoutSeconds = 30
+
+  // Bad — qualifier first, doesn't group
+  const maxLatencyMs = 500
+  const msLatency = 150
+#+end_src
+
+** Meaningful Distinctions
+
+Choose names that distinguish related variables clearly:
+
+#+begin_src javascript
+  // Good — same length, symmetrical
+  const source = getBook(sourceId)
+  const target = getBook(targetId)
+
+  // Bad — different lengths, asymmetrical
+  const src = getBook(srcId)
+  const destination = getBook(destId)
+#+end_src
+
+* Comments
+
+** Always Say Why
+
+- Don't just describe /what/ code does — explain /why/
+- Comments that restate the code are noise; comments that explain the
+  reasoning are signal
+
+#+begin_src javascript
+  // Bad — restates the code
+  // Set status to "reading"
+  book.status = 'reading'
+
+  // Good — explains the why
+  // Default new books to "to-read" so they appear in the reading queue
+  book.status = 'to-read'
+#+end_src
+
+** Format
+
+- Comments are sentences: capital letter, full stop
+- Space after =//=
+- End-of-line comments may be phrases without punctuation
+
+#+begin_src javascript
+  // This server function handles book creation with validation.
+  const createBook = createServerFn({ method: 'POST' })
+    .inputValidator(bookSchema)
+    .handler(async ({ data }) => {
+      return db.insert(data) // delegates to db layer
+    })
+#+end_src
+
+** Commit Messages
+
+Write descriptive commit messages. The message is being /read/ — PR
+descriptions don't appear in =git blame= and aren't a replacement.
+
+* Performance
+
+** Think About Performance in Design
+
+The biggest wins (1000×) come during design — when measurement is
+impossible. Fixing performance after implementation yields smaller
+gains and is harder.
+
+For this project, the key design-phase decisions are:
+- TanStack Query caching strategy (avoid redundant fetches)
+- Database query design (use indexes, avoid N+1 queries)
+- Bundle size awareness (lazy-load routes)
+
+#+begin_quote
+Tiger Style: "The lack of back-of-the-envelope performance sketches is
+the root of all evil."
+#+end_quote
+
+** Be Explicit With Configuration
+
+Pass options explicitly to library functions rather than relying on
+defaults:
+
+#+begin_src javascript
+  // Good — explicit about what we want
+  useQuery({
+    queryKey: ['books'],
+    queryFn: fetchBooks,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  })
+
+  // Bad — relies on defaults the reader must look up
+  useQuery({
+    queryKey: ['books'],
+    queryFn: fetchBooks,
+  })
+#+end_src
+
+#+begin_quote
+Tiger Style: "Explicitly pass options to library functions at call site
+rather than relying on defaults."
+#+end_quote
+
+* Formatting
+
+Handled entirely by *Prettier*. Do not override or fight Prettier
+rules — run =npx prettier --write= and move on.
+
+* References
+
+- [[https://github.com/tigerbeetle/tigerbeetle/blob/main/docs/TIGER_STYLE.md][TigerBeetle TIGER_STYLE.md (original)]]
+
+* Footnotes
+
+[fn:1] Although =strict= will be set to true by default in the new
+version (v10)
