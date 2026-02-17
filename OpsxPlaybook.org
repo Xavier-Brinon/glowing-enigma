@@ -1,0 +1,853 @@
+#+title: OPSX Playbook — A Practical Guide
+#+author: HaQadosch
+#+date: [2026-02-17 Mon]
+#+startup: indent
+#+property: header-args :results output
+
+* What Is OPSX?
+
+OPSX is OpenSpec's workflow engine. It replaces the old "linear
+phases" approach with a fluid, action-based system where you can
+do anything at any time.
+
+** The Core Idea
+
+Instead of being locked into rigid phases (plan → implement →
+archive), OPSX gives you /actions/ you can invoke whenever they
+make sense. Under the hood, artifacts form a dependency graph
+(DAG), not a pipeline:
+
+#+begin_example
+  proposal ──→ specs  ──┐
+      │                  ├──→ tasks ──→ implement
+      └──→ design ──────┘
+#+end_example
+
+Each artifact becomes "ready" when its dependencies are "done"
+(i.e., the files exist on disk). You can always go back and edit
+any artifact — the system adapts.
+
+** Philosophy: Actions, Not Phases
+
+Traditional workflows lock you into phases — planning, then
+implementation, then done. Real work does not fit neatly into
+boxes.
+
+#+begin_example
+Traditional (phase-locked):
+
+  PLANNING ────────► IMPLEMENTING ────────► DONE
+      │                    │
+      │   "Can't go back"  │
+      └────────────────────┘
+
+OPSX (fluid actions):
+
+  proposal ──► specs ──► design ──► tasks ──► implement
+#+end_example
+
+Key principles:
+- *Actions, not phases* — Commands are things you can /do/,
+  not stages you are stuck in.
+- *Dependencies are enablers* — They show what is possible,
+  not what is required next.
+
+OPSX workflows are driven by /schemas/ that define artifact
+sequences. You can create custom schemas to match your team's
+style (see the Customization section).
+
+** The Four Personas
+
+OPSX works with four agent personas, each responsible for a
+different concern:
+
+| Persona              | Role                                    | Produces      |
+|----------------------+-----------------------------------------+---------------|
+| Requirements Analyst | Interviews you, eliminates ambiguity    | =proposal.md= |
+| Solution Architect   | Reads proposal, designs the solution    | =design.md=   |
+| Developer            | Implements tasks via TDD, small commits | Working code  |
+| Reviewer             | Audits commits, enforces standards      | =comments.md= |
+
+You do not manually switch between these personas. The OPSX
+commands invoke the appropriate behaviour based on the action.
+
+** The Commands
+
+| Command              | What It Does                                         |
+|----------------------+------------------------------------------------------|
+| ~/opsx:explore~      | Think through ideas freely. No structure imposed.    |
+| ~/opsx:new~          | Start a new change. Creates scaffold.                |
+| ~/opsx:continue~     | Create the next artifact (based on what is ready).   |
+| ~/opsx:ff~           | Fast-forward: create all planning artifacts at once. |
+| ~/opsx:apply~        | Implement tasks. Update artifacts if design changes. |
+| ~/opsx:sync~         | Sync delta specs to main specs.                      |
+| ~/opsx:archive~      | Archive completed work.                              |
+| ~/opsx:verify~       | Verify implementation matches change artifacts.      |
+| ~/opsx:bulk-archive~ | Archive multiple completed changes at once.          |
+
+* Conflict with the set up of the personas
+** Friction with the 4 personas
+
+The personas in =./personas/= and the OPSX workflow solve the same
+problem — structured AI collaboration — but they are different
+implementations of it.
+
+*** What each system does
+
+The persona files (=analyst.md=, =architect.md=, =developer.md=,
+=reviewer.md=) are *raw system prompts*. You switch between them
+manually by restarting Claude with =--system-prompt-file
+personas/architect.md=. Each file defines a role's goals, rules, and
+expected outputs. They are self-contained and stateless — they know
+nothing about each other's outputs.
+
+OPSX is a *command layer on top of Claude Code*. The commands
+(=/opsx:new=, =/opsx:ff=, =/opsx:apply=, …) trigger skill files in
+=.claude/skills/= that internally embody persona behaviour. The agent
+switches roles automatically based on which command you invoke.
+Artifact files on disk act as the shared state between roles.
+
+*** The mapping
+
+The four personas map directly to OPSX commands:
+
+| Persona file   | OPSX equivalent      | Triggered by                            |
+|----------------+----------------------+-----------------------------------------|
+| =analyst.md=   | Requirements Analyst | =/opsx:explore=, first =/opsx:continue= |
+| =architect.md= | Solution Architect   | =/opsx:ff=, subsequent =/opsx:continue= |
+| =developer.md= | Developer            | =/opsx:apply=                           |
+| =reviewer.md=  | Reviewer             | =/opsx:verify=                          |
+
+*** The concrete mismatch
+
+The persona files have hardcoded project specifics that conflict with
+OPSX conventions:
+
+1. =analyst.md= outputs =specs/requirements.md= — OPSX expects
+   =proposal.md= and =specs/<domain>/spec.md= inside the change folder.
+2. =architect.md= reads =specs/requirements.md= and writes
+   =specs/design.md= — OPSX expects =design.md= inside the change
+   folder, not the global =specs/= directory.
+3. Both analyst and architect files embed Book Tracker specifics (phases,
+   tech stack, XState, dotenvx) directly in the instructions — these
+   would need to be extracted to be reusable across projects.
+4. The personas are activated by restarting the session; OPSX skills are
+   invoked within one continuing session via slash commands.
+
+*** Two paths forward
+
+*Path A — Manual persona switching alongside OPSX (low effort)*
+
+Keep both systems. Use OPSX for command structure and artifact
+tracking. When a role needs deep domain context, paste the relevant
+sections of the persona file into your conversation message rather
+than as a system prompt:
+
+#+begin_example
+You: /opsx:continue
+     [paste relevant sections from personas/architect.md as context]
+#+end_example
+
+Low setup cost, but you lose the clean role separation.
+
+*Path B — Port the personas into the OPSX config (proper integration)*
+
+Extract what each persona knows into the right OPSX-managed locations:
+
+1. *Project-agnostic rules* (coding standards, TDD discipline, review
+   criteria) → =openspec/config.yaml= under the =rules:= key. OPSX
+   injects these into every agent automatically.
+
+2. *Project-specific constraints* (tech stack, ADRs, file paths) →
+   =openspec/config.yaml= under the =context:= key:
+   #+begin_src yaml
+   context: |
+     Tech stack: TanStack Start, node:sqlite, XState, dotenvx
+     No Express. Server logic via createServerFn only.
+     State: XState for entity lifecycles, useState for trivial UI.
+   #+end_src
+
+3. *Role-specific checklists* (Reviewer approval criteria, Developer
+   quality gates) → inlined directly into the =context:= block of
+   =openspec/config.yaml= so OPSX injects them automatically. Human-
+   readable mirrors live in =openspec/standards/= for reference, but
+   =config.yaml= is the authoritative source.
+
+4. The persona files then become *conversation supplements* — context
+   you can drop in when a role needs extra grounding — rather than full
+   system prompts.
+
+*** Path B applied — current state
+
+Path B has been fully applied. All persona knowledge is inlined into
+=openspec/config.yaml= and injected by OPSX automatically into every
+agent invocation. The persona files are now human reference only.
+
+=openspec/config.yaml= is the single source of truth. Its =context:=
+block contains:
+- Project description, tech stack, architecture constraints
+- ADR decisions (0002–0005)
+- Style guide rules (safety, simplicity, naming, comments, performance)
+- Developer quality gates (TDD pattern, git workflow, pre-commit gates,
+  phase sequence, self-review checklist)
+- Review criteria (review workflow, full approval checklist, reviewer
+  rules)
+
+#+begin_example
+openspec/
+├── config.yaml                    ← INJECTED into every agent automatically
+└── standards/
+    ├── review-checklist.md        ← human reference only (mirrored in config.yaml)
+    └── developer-quality-gates.md ← human reference only (mirrored in config.yaml)
+
+personas/
+├── analyst.md   ← reference only
+├── architect.md ← reference only
+├── developer.md ← reference only
+└── reviewer.md  ← reference only
+#+end_example
+
+What each OPSX command picks up from =config.yaml=:
+
+| Command          | Picks up                                                        |
+|------------------+-----------------------------------------------------------------|
+| =/opsx:explore=  | Full context (project, stack, ADRs, style guide, quality gates) |
+| =/opsx:continue= | Full context + =rules.proposal=                                 |
+| =/opsx:ff=       | Full context + all =rules= sections                             |
+| =/opsx:apply=    | Full context incl. developer quality gates + =rules.tasks=      |
+| =/opsx:verify=   | Full context incl. review criteria + =rules= sections           |
+| =/opsx:archive=  | Full context                                                    |
+
+Note: if you update =openspec/standards/= files, update =config.yaml=
+too — they are kept in sync manually.
+
+*** The one thing to watch
+
+The persona files assume a *linear phase sequence* (Phase 1 → Phase 2
+→ … → Phase 6). OPSX's artifact DAG is deliberately non-linear. If you
+import the phase plan from =architect.md= directly into =tasks.md=, it
+works — =/opsx:apply= will execute the phases sequentially. The tension
+only appears if you need to run parallel changes that touch the same
+phases, in which case OPSX's model is richer and the persona files
+offer no guidance.
+
+
+* Workflow Patterns
+
+Choose the pattern that matches your situation.
+
+** Pattern 1: Quick Feature
+
+*When to use*: you know what you want to build and just need to
+execute. Small to medium features, bug fixes, straightforward
+changes.
+
+#+begin_example
+/opsx:new ──► /opsx:ff ──► /opsx:apply ──► /opsx:verify ──► /opsx:archive
+#+end_example
+
+Example session:
+#+begin_example
+You:  /opsx:new add-logout-button
+AI:   Created openspec/changes/add-logout-button/
+      Ready to create: proposal
+
+You:  /opsx:ff
+AI:   ✓ proposal.md  ✓ specs/  ✓ design.md  ✓ tasks.md
+      Ready for implementation!
+
+You:  /opsx:apply
+AI:   ✓ Added logout button to header
+      ✓ Implemented session clearing
+      ✓ Added confirmation dialog
+
+You:  /opsx:archive
+AI:   ✓ Merged specs  ✓ Archived change
+#+end_example
+
+** Pattern 2: Exploratory
+
+*When to use*: requirements are unclear, you need to investigate
+the codebase first, or you want to validate each artifact before
+continuing. Performance optimisation, debugging, architectural
+decisions.
+
+#+begin_example
+/opsx:explore ──► /opsx:new ──► /opsx:continue ──► ... ──► /opsx:apply
+#+end_example
+
+Example session:
+#+begin_example
+You:  /opsx:explore
+AI:   What would you like to explore?
+
+You:  I want to improve page load performance but I'm not sure
+      where the bottlenecks are.
+
+AI:   I found three main bottlenecks:
+      1. Large unoptimized images
+      2. Synchronous data fetching in ProductList
+      3. Re-renders from context changes
+
+You:  Let's tackle the data fetching issue.
+
+You:  /opsx:new optimize-product-list-fetching
+
+You:  /opsx:continue
+AI:   Creating proposal based on our exploration...
+      Ready to create: specs, design
+
+You:  /opsx:continue
+AI:   Creating specs...
+#+end_example
+
+** Pattern 3: Parallel Changes
+
+*When to use*: working on multiple independent features, handling
+urgent interrupts, or collaborating across branches.
+
+#+begin_example
+Change A: /opsx:new ──► /opsx:ff ──► /opsx:apply (in progress)
+                                         │
+                                    context switch
+                                         │
+Change B: /opsx:new ──► /opsx:ff ──────► /opsx:apply
+#+end_example
+
+Resume a named change explicitly:
+#+begin_example
+/opsx:apply add-dark-mode
+#+end_example
+
+The agent picks up from the last completed task in
+=tasks.md=.
+
+When several changes finish around the same time, batch-archive
+them:
+#+begin_example
+You:  /opsx:bulk-archive
+AI:   Found 3 completed changes:
+      - add-dark-mode
+      - fix-login-redirect
+      - update-footer
+
+      ⚠ add-dark-mode and update-footer both touch specs/ui/
+      Resolving by chronological order of implementation…
+
+      Archive all 3?
+
+You:  Yes
+AI:   ✓ Archived add-dark-mode
+      ✓ Archived fix-login-redirect
+      ✓ Archived update-footer
+#+end_example
+
+Bulk archive detects conflicts when multiple changes touch the
+same specs, and resolves them by inspecting what is actually
+implemented.
+
+* Before You Start
+
+** Prerequisites
+
+1. Install OpenSpec and initialise:
+   #+begin_src bash
+     openspec init
+   #+end_src
+   This creates =.claude/skills/openspec-*/SKILL.md= and sets up
+   the workflow commands.
+
+2. Optionally create =openspec/config.yaml= for project defaults:
+   #+begin_src yaml
+   schema: spec-driven
+   context: |
+     Tech stack: TypeScript, React, TanStack Start
+     Database: node:sqlite (built-in)
+     Testing: Vitest for unit tests
+     Style: ESLint with Prettier, strict TypeScript
+   rules:
+     proposal:
+       - Include success criteria
+     specs:
+       - Use Given/When/Then format for scenarios
+     design:
+       - Include component diagrams for complex flows
+   #+end_src
+
+3. Attach MCP servers (Context7 for docs, Serena for code
+   symbols) so agents can search effectively.
+
+** Context Management
+
+🟡 *Critical rule*: run ~/context~ frequently. If you exceed
+*100,000 tokens*, exit and restart the session. A bloated context
+makes the AI unfocused and error-prone.
+
+* Playbook: Walking Through a Full Cycle
+
+Below is a complete walkthrough of one round of OPSX, from idea
+to archived change. Use this as a template.
+
+** Round 1: Explore the Idea
+:PROPERTIES:
+:CUSTOM_ID: round-explore
+:END:
+
+*Goal*: clarify what you want to build before committing to
+formal artifacts.
+
+#+begin_example
+/opsx:explore
+#+end_example
+
+This is a free-form thinking session. Use it to:
+- Describe the feature you have in mind.
+- Discuss constraints and trade-offs.
+- Investigate the codebase (the agent can search code).
+- Compare approaches.
+
+*Best practices*:
+- Be conversational. Ask "what if" questions.
+- Do not worry about structure yet.
+- If the idea is clear already, skip to Round 2 or 3.
+
+*Exit criterion*: you can articulate what you want in one or two
+sentences. When ready, move on.
+
+** Round 2: Create the Change
+:PROPERTIES:
+:CUSTOM_ID: round-new
+:END:
+
+*Goal*: formalise the change with a name and scaffold.
+
+#+begin_example
+/opsx:new my-feature-name
+#+end_example
+
+This creates a change directory under =openspec/changes/= with
+all artifacts. The structure created looks like this:
+
+#+begin_example
+openspec/
+├── specs/              # Source of truth (system's current behaviour)
+│   └── <domain>/
+│       └── spec.md
+├── changes/            # Proposed updates (one folder per change)
+│   └── <change-name>/
+│       ├── proposal.md
+│       ├── design.md
+│       ├── tasks.md
+│       └── specs/      # Delta specs (what is changing)
+│           └── <domain>/
+│               └── spec.md
+└── config.yaml         # Project configuration (optional)
+#+end_example
+
+Two key directories:
+- *=specs/=* — The source of truth. Describes how your system
+  currently behaves. Organised by domain (e.g. =specs/auth/=,
+  =specs/payments/=).
+- *=changes/=* — Proposed modifications. Each change gets its
+  own folder. When complete, its specs merge into the main
+  =specs/= directory.
+
+*Best practices*:
+- Pick a short, descriptive name (kebab-case). Examples:
+  =add-dark-mode=, =fix-login-bug=, =book-tracker-crud=.
+- Keep the description focused. One feature per change.
+
+** Round 3: Build the Planning Artifacts
+:PROPERTIES:
+:CUSTOM_ID: round-plan
+:END:
+
+*Goal*: produce the proposal, specs, design, and tasks.
+
+Each artifact builds on those before it:
+
+#+begin_example
+proposal ──► specs ──► design ──► tasks ──► implement
+   ▲           ▲          ▲                    │
+   └───────────┴──────────┴────────────────────┘
+            update as you learn
+#+end_example
+
+You can always go back and refine earlier artifacts as
+implementation teaches you more.
+
+You have two strategies:
+
+*** Strategy A: Fast-Forward (clear vision)
+
+When you already know what you want:
+
+#+begin_example
+/opsx:ff
+#+end_example
+
+Creates *all* planning artifacts in one go:
+- =proposal.md= — high-level goals and success criteria.
+- =specs/= — detailed requirements per capability.
+- =design.md= — technical architecture, components, schemas.
+- =tasks.md= — implementation checklist with phases.
+
+Use this when you have discussed the idea enough (e.g., after
+a thorough =/opsx:explore= session) and want to move fast.
+
+*** Strategy B: Incremental (exploring as you go)
+
+When you want to validate each step:
+
+#+begin_example
+/opsx:continue
+#+end_example
+
+Creates *one* artifact at a time, following the dependency
+graph:
+1. First call → creates =proposal.md= (no dependencies).
+2. Second call → creates =specs/= (requires proposal).
+3. Third call → creates =design.md= (requires proposal).
+4. Fourth call → creates =tasks.md= (requires specs + design).
+
+After each artifact, review it. Edit if something is off. Then
+call =/opsx:continue= again.
+
+*Choosing between the two strategies*:
+
+| Situation                                 | Use              |
+|-------------------------------------------+------------------|
+| Clear requirements, ready to build        | =/opsx:ff=       |
+| Exploring, want to review each step       | =/opsx:continue= |
+| Want to iterate on proposal before specs  | =/opsx:continue= |
+| Time pressure, need to move fast          | =/opsx:ff=       |
+| Complex change, want fine-grained control | =/opsx:continue= |
+
+*Rule of thumb*: if you can describe the full scope upfront,
+use =/opsx:ff=. If you are figuring it out as you go, use
+=/opsx:continue=.
+
+*Best practices*:
+- Read each artifact as it is created. Fix issues immediately.
+- If the AI misunderstood something, edit the artifact and re-run
+  =/opsx:continue=. The system re-evaluates from the updated
+  state.
+- Check status anytime with:
+  #+begin_src bash
+  openspec status --change "my-feature-name"
+  #+end_src
+
+** Understanding Delta Specs
+:PROPERTIES:
+:CUSTOM_ID: delta-specs
+:END:
+
+Delta specs live in =openspec/changes/<name>/specs/= and
+describe what is changing relative to your current specs.
+They use three sections:
+
+#+begin_src markdown
+# Delta for Auth
+
+## ADDED Requirements
+
+### Requirement: Two-Factor Authentication
+The system MUST require a second factor during login.
+
+#### Scenario: OTP required
+- GIVEN a user with 2FA enabled
+- WHEN the user submits valid credentials
+- THEN an OTP challenge is presented
+
+## MODIFIED Requirements
+
+### Requirement: Session Timeout
+The system SHALL expire sessions after 30 minutes of inactivity.
+(Previously: 60 minutes)
+
+## REMOVED Requirements
+
+### Requirement: Remember Me
+(Deprecated in favour of 2FA)
+#+end_src
+
+When you archive a change, OpenSpec processes these sections:
+- *ADDED* requirements are appended to the main spec.
+- *MODIFIED* requirements replace the existing version.
+- *REMOVED* requirements are deleted from the main spec.
+
+** Round 4: Implement via TDD
+:PROPERTIES:
+:CUSTOM_ID: round-implement
+:END:
+
+*Goal*: turn the tasks into working, tested code.
+
+1. Create a branch for the work:
+   #+begin_src bash
+   git checkout -b feature/my-feature-name
+   #+end_src
+
+2. Start implementation:
+   #+begin_example
+   /opsx:apply
+   #+end_example
+
+The Developer persona will:
+- Read =tasks.md= for the current phase.
+- Write tests first (TDD), then make them pass.
+- Check off completed tasks in =tasks.md=.
+- Commit after each logical step.
+
+*Best practices*:
+- *One branch per change.* Do not mix multiple changes.
+- *Smallest increments possible.* Each commit should be a single
+  logical unit.
+- *If the design is wrong*, do not push through. Edit
+  =design.md= or =specs/= directly, then continue with
+  =/opsx:apply=. The agent picks up the updated artifacts.
+- *Comment all code.* Explain /why/, not /what/ (see
+  STYLE_GUIDE.org).
+- *No =any= types.* Strict TypeScript throughout.
+- *Never swallow errors silently.* Validate at boundaries.
+
+*** When Implementation Reveals Design Issues
+
+This is the most important OPSX advantage over linear workflows.
+If you discover mid-implementation that the design is wrong:
+
+1. Edit the relevant artifact (=design.md=, =specs/=, or
+   =tasks.md=) directly.
+2. Run =/opsx:apply= again. The agent reads the updated
+   artifacts.
+3. No need to "go back to a phase". Just fix and continue.
+
+** Round 5: Review
+:PROPERTIES:
+:CUSTOM_ID: round-review
+:END:
+
+*Goal*: quality-gate the implementation.
+
+After all tasks are checked off:
+
+1. The Reviewer persona analyses the work:
+   - Code correctness
+   - Style adherence (STYLE_GUIDE.org)
+   - Edge cases and error handling
+   - Test coverage
+
+2. Produces =comments.md= with specific issues:
+   - Line numbers where applicable
+   - Whether to fix inline or refactor
+   - Improvement recommendations
+
+3. Developer addresses each comment.
+
+*Repeat the Developer/Reviewer loop* until the Reviewer is
+satisfied.
+
+*Best practices*:
+- Do not merge until the Reviewer approves.
+- Keep the review focused. If scope creeps, start a new change.
+
+** Round 6: Verify and Archive
+:PROPERTIES:
+:CUSTOM_ID: round-archive
+:END:
+
+*Goal*: verify completeness and archive the finished work.
+
+1. Verify the implementation matches the artifacts:
+   #+begin_example
+   /opsx:verify
+   #+end_example
+   This checks implementation across three dimensions:
+
+   | Dimension    | What it validates                                               |
+   |--------------+-----------------------------------------------------------------|
+   | Completeness | All tasks done, all requirements implemented, scenarios covered |
+   | Correctness  | Implementation matches spec intent, edge cases handled          |
+   | Coherence    | Design decisions reflected in code, patterns consistent         |
+
+   Example output:
+   #+begin_example
+   COMPLETENESS
+   ✓ All 12 tasks in tasks.md are checked
+   ✓ All requirements in specs have corresponding code
+   ⚠ Scenario "Session timeout after inactivity" not tested
+
+   CORRECTNESS
+   ✓ Implementation matches spec intent
+   ✓ Edge cases from scenarios are handled
+
+   COHERENCE
+   ✓ Design decisions reflected in code structure
+   ⚠ Design mentions "event-driven" but implementation uses polling
+
+   Critical issues: 0  /  Warnings: 2  /  Ready to archive: Yes
+   #+end_example
+
+   Verify will not block archive, but it surfaces issues you
+   may want to address first.
+
+2. Sync delta specs to main specs if needed:
+   #+begin_example
+   /opsx:sync
+   #+end_example
+
+3. Archive the change:
+   #+begin_example
+   /opsx:archive my-feature-name
+   #+end_example
+   Merges delta specs into =openspec/specs/= and moves the
+   change folder to =openspec/changes/archive/<date>-<name>/=
+   for audit history.
+
+4. Merge the branch:
+   #+begin_src bash
+   git checkout main
+   git merge feature/my-feature-name
+   #+end_src
+
+* Decision Guide: Update vs. New Change
+
+When your change evolves, decide whether to update or start
+fresh:
+
+| Situation                               | Action   | Reason                         |
+|-----------------------------------------+----------+--------------------------------|
+| Edge cases discovered                   | *Update* | Same intent, refined execution |
+| Scope narrows to MVP                    | *Update* | Focused version of same goal   |
+| Tech approach changes                   | *Update* | Learning-driven correction     |
+| Codebase was not what you expected      | *Update* | Learning-driven correction     |
+| Problem itself changes                  | *New*    | Different intent entirely      |
+| Scope exploded beyond recognition       | *New*    | Essentially different work     |
+| Original is completable as-is           | *New*    | Archive original, start fresh  |
+| Patches would confuse more than clarify | *New*    | Clarity beats patching         |
+
+** Decision Tree
+
+#+begin_example
+                 ┌─────────────────────────────────────┐
+                 │     Is this the same work?          │
+                 └──────────────┬──────────────────────┘
+                                │
+            ┌───────────────────┼───────────────────┐
+            │                   │                   │
+            ▼                   ▼                   ▼
+     Same intent?       >50% overlap?        Can original
+     Same problem?      Same scope?          be "done" without
+            │                   │            these changes?
+            │                   │                   │
+  ┌────────┴────────┐  ┌───────┴───────┐  ┌────────┴────────┐
+  │                 │  │               │  │                 │
+ YES               NO YES             NO  NO              YES
+  │                 │  │               │  │                 │
+  ▼                 ▼  ▼               ▼  ▼                 ▼
+UPDATE            NEW UPDATE          NEW UPDATE           NEW
+#+end_example
+
+** Concrete Example: "Add dark mode"
+
+- "Need to also support custom themes" → *New change*
+  (scope exploded beyond original intent).
+- "System preference detection is harder than expected" → *Update*
+  (same intent, learning-driven correction).
+- "Let's ship toggle first, add preferences later" → *Update*,
+  then archive, then start a new change for preferences.
+
+The principle:
+#+begin_quote
+Update preserves context. New change provides clarity.
+
+Choose update when the history of your thinking is valuable.
+Choose new when starting fresh would be clearer than patching.
+#+end_quote
+
+* Quick Reference Card
+
+** Typical Session Flow
+
+#+begin_example
+/opsx:explore          ← Think through the idea
+/opsx:new my-feature   ← Formalise it
+/opsx:ff               ← Generate all planning artifacts
+                          (or /opsx:continue × 4 for incremental)
+git checkout -b feature/my-feature
+/opsx:apply            ← Implement (TDD, small commits)
+                          ← Review loop (Developer ↔ Reviewer)
+/opsx:verify           ← Check completeness
+/opsx:archive          ← Archive completed work
+git checkout main && git merge feature/my-feature
+#+end_example
+
+** Checking Status
+
+#+begin_src bash
+openspec status --change "my-feature"
+#+end_src
+
+Shows which artifacts are BLOCKED, READY, or DONE.
+
+** Other Useful CLI Commands
+
+#+begin_src bash
+openspec list                    # List all active changes
+openspec show my-feature         # View details of a change
+openspec validate my-feature     # Validate spec formatting
+openspec view                    # Open the interactive dashboard
+#+end_src
+
+** Complete Command Reference
+
+| Command              | Purpose                        | When to Use                          |
+|----------------------+--------------------------------+--------------------------------------|
+| ~/opsx:explore~      | Think through ideas            | Unclear requirements, investigation  |
+| ~/opsx:new~          | Start a change                 | Beginning any new work               |
+| ~/opsx:continue~     | Create next artifact           | Step-by-step artifact creation       |
+| ~/opsx:ff~           | Create all planning artifacts  | Clear scope, ready to build          |
+| ~/opsx:apply~        | Implement tasks                | Ready to write code                  |
+| ~/opsx:verify~       | Validate implementation        | Before archiving, catch mismatches   |
+| ~/opsx:sync~         | Merge delta specs              | Optional — archive prompts if needed |
+| ~/opsx:archive~      | Complete the change            | All work finished                    |
+| ~/opsx:bulk-archive~ | Archive multiple changes       | Parallel work, batch completion      |
+
+** Custom Schemas
+
+If the default =spec-driven= schema does not fit your workflow:
+
+#+begin_src bash
+openspec schema init my-workflow    # Create from scratch
+openspec schema fork spec-driven my-workflow  # Fork existing
+openspec schema validate my-workflow  # Validate structure
+#+end_src
+
+Schemas live in =openspec/schemas/= (project-local) or
+=~/.local/share/openspec/schemas/= (user-global).
+
+* Common Pitfalls
+
+- *Skipping explore*: jumping straight to =/opsx:new= without
+  thinking the idea through leads to vague proposals and rework.
+- *Monster changes*: keep each change focused on one feature.
+  If scope creeps, archive and start a new change.
+- *Ignoring context limits*: after ~100k tokens, restart the
+  session. The AI degrades silently.
+- *Pushing through bad design*: if implementation reveals the
+  design is wrong, stop and fix the artifacts. OPSX makes this
+  easy — use it.
+- *Merging without review*: always run the Reviewer loop. It
+  catches edge cases and style violations cheaply.
+- *Not checking status*: run =openspec status= to see the
+  current state of your change. It prevents confusion about
+  what is ready.
+- *Vague change names*: good names make =openspec list= useful.
+
+  #+begin_example
+  Good:                     Avoid:
+  add-dark-mode             feature-1
+  fix-login-redirect        update
+  optimize-product-query    changes
+  implement-2fa             wip
+  #+end_example

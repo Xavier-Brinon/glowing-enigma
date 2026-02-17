@@ -1,67 +1,8 @@
-#+title: Working with OpenSpec with multiple Claude profiles
++title: Working with OpenSpec with multiple Claude profiles
 #+author: HaQadosch
 #+date: [2026-02-15 Sun]
 #+startup: indent
 #+property: header-args :results output
-* Org mode shortcuts
-- tangle :: ~org-babel-tangle~, ~C-c C-v C-t~
-
-** Config
-- ~C-c C-c~ :: Refresh local setup for that file
-
-** Dates:
-- ~C-c .~ :: active timestamps
-  creates an entry in the agenda
-- ~C-c !~ :: inactive timestamps
-  doesn´t create an entry in the agenda
-- link :: [[https://orgmode.org/orgguide.html#Timestamps][timestamps]]
-
-** Links:
-- ~C-c C-l~ :: create link
-- link :: [[https://orgmode.org/orgguide.html#Hyperlinks][hyperlinks]]
-
-** Tables
-- ~C-c }~ :: display cells references
-- ~C-c ?~ :: display ref for that cell
-  references are =@ROW$COLUMN=
-- link :: [[https://orgmode.org/manual/References.html][table references]]
-- formula :: =@I..II=
-  select all the rows between horizontal lines (hline) 1 and 2
-  =vmean(@I..II);EN= column range mean, treats empty values as null (0)
-
-** Whitespace
-- ~M-x whitespace-mode~ :: Activates a better whitespace mode
-- ~M-x auto-fill-mode~ :: Auto-fill, enforce max size limit
-- ~M-q~ :: Force auto-fill on current paragraph
-
-** Feetnotes
-- ~C-c C-x f~ :: Creates a footnote, see [[https://orgmode.org/guide/Creating-Footnotes.html][guide]].
-- ~C-c C-c~ :: to jump between definition and refs.
-
-** Todos
-- ~C-c C-t~ :: cycling throught the states of the todos
-- ~C-u C-c C-t~ :: Log the change of status
-
-** Clocking work
-- ~C-c C-x C-i~ :: Clock in
-- ~C-c C-x C-o~ :: Clock out
-- ~C-c C-x C-d~ :: Display clocks
-
-** Includes files
-Start with the directive ~INCLUDE~ and the location of the file
-  - ~C-c '~ :: Visit the included file
-  - ~C-c &~ :: Go back to the original doc
-  🟡 The included doc start at the hierarchy of the inclusion
-  See [[https://orgmode.org/manual/Include-Files.html][the manual]]
-
-** Code Block - Structure Template
-- ~C-c C-,~ :: Insert structure template
-See [[https://orgmode.org/manual/Structure-Templates.html][17.2 Structure Templates]]
-and [[https://orgmode.org/manual/Structure-of-Code-Blocks.html][16.2 Structure of Code Blocks]]
-
-* Emacs Shortcut
-- Toggle display of quick help buffer :: ~C-h C-q~ or ~M-x cheat-sheet~
-
 * Step 1: Create the different profiles
 We want to start with the following profiles:
 - The requirement analyst
@@ -108,6 +49,8 @@ Thinking about:
 - A pure TUI interface[fn:3]
 - Check [[https://owasp.org/Top10/2025/][OWASP]] list for security
 - [[https://github.com/tigerbeetle/tigerbeetle/blob/main/docs/TIGER_STYLE.md][Tigerbeetle]] style
+- local first, CRDT database
+- pure SSH app
 
 After some discussions worthy of 2 ADRs, we have the tech stack. Now I
 can create the 4 personnas.
@@ -121,8 +64,40 @@ Changed the tech stack to the full TanStack Router; creating ADR.
 Changed the tech stack to include dotenvx as well; creating ADR.
 
 Changed the tech stack to add XState; creating ADR.
+* Step 2: OpenSpec and the OPSX workflow
+Let's try the new new workflow.[fn:4]
+
+#+begin_src bash
+  openspec init
+#+end_src
+
+Quick start after setup:
+- ~/opsx:new~ :: Create a change
+- ~/opsx:continue~ :: Next artifact
+- ~/opsx:apply~ :: Implement tasks
+** Create schema template in your project
+The idea here is to adapt opsx to the specifics of your project.
+#+begin_src bash
+  openspec schema fork spec-driven <project-workflow>
+  # modify the schema
+  openspec schema validate <project-workflow>
+#+end_src
+** Apparent friction with the old set up
+The 4 personas created earlier are not really compatible with the way
+*opsx* works. They're quite rigid and are made to be attached to a new
+*claude* session at each step. *opsx* wants to do everything in any
+order during the same session.
+
+We could inject some of the 4 personas config into the *opsx*
+different configuration files.
+
 
 * Footnotes
+[fn:4] https://github.com/Fission-AI/OpenSpec/blob/main/docs/opsx.md
+There is also the getting started that looks like a nice run through.
+https://github.com/Fission-AI/OpenSpec/blob/main/docs/getting-started.md
+and commands reference
+https://github.com/Fission-AI/OpenSpec/blob/main/docs/commands.md
 
 [fn:3] https://github.com/vadimdemedes/ink
 [fn:2] https://frankentui.com/web_react

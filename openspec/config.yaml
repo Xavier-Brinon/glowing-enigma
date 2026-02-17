@@ -1,0 +1,256 @@
+schema: book-app-workflow
+
+# Project context — injected into every agent when creating artifacts.
+# Distilled from: personas/, ADR/, STYLE_GUIDE.org, implementationPlan.org
+context: |
+  ## Project: Book Tracker
+  A personal "next books to read" app. Users track books (title, author,
+  how heard about it, expectations, status) and their reading progress.
+  Runs entirely locally. No authentication, no multi-user, no production
+  deployment concerns.
+
+  ## Tech Stack (see ADR/0002–0005 for rationale)
+  - Framework:   TanStack Start (full-stack React, file-based routing)
+  - Router:      TanStack Router (built into Start, src/routes/*.tsx)
+  - Data:        TanStack Query (useQuery / useMutation, built into Start)
+  - Server:      createServerFn — no Express, no REST API, no separate process
+  - Database:    node:sqlite (Node.js built-in, experimental, requires Node 22.5+)
+  - State:       XState for entity lifecycles; plain useState for trivial UI only
+  - Env vars:    dotenvx (encrypted .env committed to git; .env.keys gitignored)
+  - Language:    TypeScript strict mode throughout — no `any` types
+  - Formatting:  Prettier (run and commit; never fight it)
+  - Testing:     Vitest for unit tests; server functions tested via route loaders
+
+  ## Architecture Constraints
+  - One `npm run dev` starts everything (dotenvx run -- prefix in package.json)
+  - Server functions (createServerFn) are colocated with the route files that use them
+  - All database access isolated in src/lib/db.ts
+  - State machines defined in src/machines/ — one file per machine
+  - Book lifecycle: to-read → reading → done (modelled as XState machine)
+  - Status transitions go through send({ type: 'EVENT' }), never direct string assignment
+  - Input validation via inputValidator on every createServerFn
+  - Node.js version pinned via .nvmrc (22.5+)
+
+  ## Project Structure
+  src/
+    routes/
+      __root.tsx            # Root layout
+      index.tsx             # Book list + server functions
+      books/
+        new.tsx             # Add book form + createServerFn
+        $bookId.tsx         # Edit/delete + createServerFn
+    components/
+      BookCard.tsx
+      BookForm.tsx
+    lib/
+      db.ts                 # node:sqlite setup and queries
+    machines/
+      bookStatusMachine.ts  # Book lifecycle state machine
+  app.config.ts             # TanStack Start config
+  .env                      # Encrypted env vars (committed)
+  .env.keys                 # Private decryption keys (gitignored)
+
+  ## Environment Variables
+  - Use `npx dotenvx set KEY value` to add/change vars — never edit .env by hand
+  - DATABASE_PATH: path to the SQLite database file
+  - .env.keys must be backed up outside the repo; losing it requires re-encryption
+
+  ## ADR Decisions (accepted)
+  - ADR 0002: node:sqlite over better-sqlite3 (learning, zero deps, reversible)
+  - ADR 0003: TanStack Start over Router + Express (simpler architecture, 2 layers vs 3)
+  - ADR 0004: dotenvx for encrypted env vars (secure by default, config in git)
+  - ADR 0005: XState for entity lifecycle state (explicit transitions, impossible invalids)
+
+  ## Style Guide (adapted from TigerBeetle TIGER_STYLE)
+  Design priorities: Safety > Simplicity > Developer experience
+
+  Safety:
+  - No `any` types; TypeScript strict mode; explicit function signatures
+  - Never swallow errors — no empty catch blocks; surface errors to the user
+  - Validate at system boundaries (user input, URL params, createServerFn inputs)
+  - Prefer early returns over deep nesting; avoid recursion unless inherent
+
+  Simplicity:
+  - Push ifs up and fors down — branching in parents, iteration in helpers
+  - Leaf functions must be pure (no side effects, deterministic)
+  - No premature abstractions — justify every abstraction with 3+ use sites
+  - No duplicated state — derive computed values, never cache in a second variable
+  - Simple return types: void > boolean > T > T | null > T | Error
+
+  Naming:
+  - Never abbreviate (exception: loop index i, j)
+  - Nouns for data, verbs for functions
+  - Units as suffix, sorted by descending significance: latencyMs, latencyMsMax
+  - camelCase: variables, functions, props
+  - PascalCase: components, types, interfaces
+  - UPPER_SNAKE_CASE: constants, enum-like values
+  - snake_case: database column names
+  - kebab-case: route file names; PascalCase: component file names
+
+  Comments:
+  - Explain why, not what
+  - Full sentences with capital letter and full stop
+  - Commit messages are read in git blame — write them accordingly
+
+  Performance:
+  - Specify TanStack Query caching strategy (staleTime, gcTime) explicitly
+  - Design database queries to avoid N+1; use indexes from the start
+  - Lazy-load routes to control bundle size
+
+  ## Developer Quality Gates (applies during /opsx:apply)
+
+  ### TDD Pattern — mandatory for every task
+  1. Write a failing test that describes the expected behaviour
+  2. Implement the minimum code to make the test pass
+  3. Verify the test passes (npm test)
+  4. Refactor if needed — do not change behaviour, only structure
+  5. Commit with a descriptive message
+  Never implement a feature before writing its test.
+
+  ### Git Workflow
+  - One branch per change: git checkout -b feature/<change-name>
+  - Commit after each passing test — smallest logical unit
+  - Commit message format: phase-N: describe what changed and why
+  - Do not push to remote until the Reviewer approves
+  - Do not merge multiple changes into one branch
+
+  ### Pre-Commit Gates — all must pass before every commit
+  - npm run typecheck — zero TypeScript errors
+  - npm run lint — zero linting errors
+  - npm test — all tests pass
+  - App starts with npm run dev without console errors
+  - Changed user flow works end-to-end in the browser
+
+  ### Implementation Rules
+  TypeScript: strict mode, no `any`, explicit function signatures, unknown + type guards when type is truly unknown
+  Server functions: all CRUD via createServerFn, every one has inputValidator, colocated with its route file, all DB calls through src/lib/db.ts
+  State: status transitions via send({ type: 'EVENT' }) on XState machine only — never book.status = '...' directly
+  Errors: no empty catch blocks, server functions return structured errors, UI shows error states
+  Env vars: npx dotenvx set KEY value only — never edit .env by hand; .env committed (encrypted), .env.keys gitignored
+  Code style: no magic strings (use constants for status values), no commented-out code, Prettier-clean
+
+  ### Phase Sequence
+  Phase 1: Project scaffolding, dotenvx setup, .nvmrc
+  Phase 2: src/lib/db.ts schema, createServerFn CRUD, XState bookStatusMachine
+  Phase 3: Book list page, useQuery, BookCard component
+  Phase 4: Add book form, BookForm, POST mutation
+  Phase 5: Edit page, delete with confirmation, mutations
+  Phase 6: Status toggle on list, basic styling, empty state
+
+  ### Self-Review Before Requesting Review
+  - All tasks in tasks.md are checked off
+  - npm run typecheck, npm run lint, npm test — all pass
+  - Manual walkthrough: add → list → edit → delete → status toggle
+  - Data persists after restarting npm run dev
+  - No `any` types, no empty catch blocks, no direct status assignment
+  - All createServerFn calls have inputValidator
+  - .env.keys is in .gitignore and not committed
+
+  ## Review Criteria (applies during /opsx:verify)
+
+  ### Review Workflow
+  1. git log --oneline -10 and git diff main...HEAD
+  2. npm run typecheck && npm run lint
+  3. npm run dev — manual walkthrough: add → list → edit → delete → status toggle
+  4. Read changed source files
+  5. Document findings in the change's comments.md
+     - Overall assessment (one paragraph)
+     - Issues with severity: [critical], [important], [nice-to-have]
+     - File:line references where applicable
+     - Recommendation: approve or request changes
+
+  ### Approval Checklist — all must be true to approve
+
+  Functionality:
+  - Books can be added with title, author, how-heard, expectations
+  - Books can be listed and filtered/grouped by status
+  - Books can be edited
+  - Books can be deleted (with confirmation)
+  - Status transitions follow to-read → reading → done via XState
+  - All data persists correctly across sessions
+
+  Code Quality:
+  - No `any` types — strict TypeScript throughout
+  - No empty catch blocks — errors surfaced, never swallowed
+  - No commented-out code
+  - No magic strings or numbers — constants used for all status values
+  - No premature abstractions — every abstraction used in 3+ places
+  - No duplicated state — computed values derived, never cached in a second variable
+  - Naming: meaningful, never abbreviated, units as suffix
+  - Comments explain why, not what; full sentences with full stops
+  - Formatting is Prettier-clean
+
+  Testing:
+  - Tests exist for core functionality (CRUD, status transitions)
+  - All tests pass (npm test)
+  - Edge cases covered (empty list, invalid input, missing fields)
+  - Server functions tested via route loaders
+
+  Architecture:
+  - createServerFn used for all server logic — no Express, no ad-hoc fetch
+  - inputValidator present on every createServerFn
+  - TanStack Query used for all client-side data fetching
+  - XState machine drives all book status transitions (not direct string assignment)
+  - useState only for trivial UI state (modals, toggles)
+  - All database access isolated in src/lib/db.ts
+  - Server functions colocated with the route files that use them
+  - Parameterized queries only — no SQL injection risk
+
+  Security:
+  - No plaintext secrets in code or config
+  - .env encrypted via dotenvx; .env.keys gitignored
+  - Input validated at all createServerFn boundaries
+
+  Documentation:
+  - Key decisions have comments explaining why
+  - Component intent is clear without tracing the full call stack
+  - tasks.md is fully checked off
+
+  ### Reviewer Rules
+  - Be objective and constructive — focus on the code, not the developer
+  - Do not rewrite code — point out issues with evidence and suggest fixes
+  - Prioritise issues: [critical] blocks merge; [important] should fix; [nice-to-have] optional
+  - Approve explicitly in comments.md with "## Approved" when satisfied
+
+# Per-artifact rules — applied when each artifact type is created.
+rules:
+  proposal:
+    - Confirm core functionality: list, add, edit, delete, status management
+    - Confirm data to track: title, author, how-heard, expectations, status
+    - Confirm UX preferences: forms vs lists, simple vs advanced features
+    - Capture edge cases and error conditions — do not assume, confirm
+    - Requirements must be specific and measurable (SMART where applicable)
+    - Include a clear "Why now?" statement
+    - List every capability being added, modified, or removed (these drive spec files)
+    - Keep under two pages — motivation only, no implementation details
+    - Include success criteria: how will we know this change worked?
+
+  specs:
+    - Use WHEN/THEN format for all scenarios
+    - Every requirement needs at least one scenario
+    - Use SHALL/MUST for normative requirements — avoid "should" or "may"
+    - Mark breaking changes explicitly with BREAKING
+    - Each scenario is a potential test case — write it as one
+
+  design:
+    - Include: high-level architecture, technology choices with reasoning
+    - Include: database schema (column names, types, constraints)
+    - Include: server function specifications (createServerFn name, input shape, return type, errors)
+    - Include: frontend structure and routing (file paths, component tree)
+    - Include: phased implementation plan with testing approach per phase
+    - Include: success criteria per phase
+    - Only create design.md when there is real architectural complexity
+    - Document the "why X over Y" for every key decision — not just the choice
+    - Include component or data-flow diagrams for non-trivial flows
+    - Reference ADRs by number when a decision is already recorded there
+    - Specify XState machines (states, events, guards, actions) before implementing them
+    - Specify createServerFn signatures (input shape, return type, errors) upfront
+    - Verify all requirements from the proposal are addressed in the design
+
+  tasks:
+    - Break tasks into chunks completable in a single session
+    - Order by dependency: DB schema before server functions, server functions before UI
+    - Phase sequence: setup → DB + server functions + state machine → list → create → edit/delete → polish
+    - Every task must be verifiable — you know it is done when X passes or renders
+    - TDD: write the failing test as a sub-task before the implementation task
+    - Each task maps to one git commit on one branch — never mix concerns
