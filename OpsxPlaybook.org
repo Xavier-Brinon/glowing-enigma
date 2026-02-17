@@ -248,8 +248,8 @@ changes.
 
 Example session:
 #+begin_example
-You:  /opsx:new add-logout-button
-AI:   Created openspec/changes/add-logout-button/
+You:  /opsx:new book-tracker-crud
+AI:   Created openspec/changes/book-tracker-crud/
       Ready to create: proposal
 
 You:  /opsx:ff
@@ -257,9 +257,9 @@ AI:   ✓ proposal.md  ✓ specs/  ✓ design.md  ✓ tasks.md
       Ready for implementation!
 
 You:  /opsx:apply
-AI:   ✓ Added logout button to header
-      ✓ Implemented session clearing
-      ✓ Added confirmation dialog
+AI:   ✓ Phase 2: db.ts schema + createServerFn CRUD
+      ✓ Phase 3: book list page with useQuery
+      ✓ Phase 4: add book form with mutation
 
 You:  /opsx:archive
 AI:   ✓ Merged specs  ✓ Archived change
@@ -281,17 +281,19 @@ Example session:
 You:  /opsx:explore
 AI:   What would you like to explore?
 
-You:  I want to improve page load performance but I'm not sure
-      where the bottlenecks are.
+You:  I want to add book grouping by theme but I'm not sure
+      whether to do it in the DB query or in the UI.
 
-AI:   I found three main bottlenecks:
-      1. Large unoptimized images
-      2. Synchronous data fetching in ProductList
-      3. Re-renders from context changes
+AI:   Let me look at the current db.ts and book list route...
+      Two approaches:
+      1. SQL GROUP BY theme in the query (simpler, faster)
+      2. Client-side grouping in the BookList component (more flexible)
+      Your XState machine doesn't need to change either way.
+      What does "theme" mean — a free-text tag or a fixed enum?
 
-You:  Let's tackle the data fetching issue.
+You:  Free-text tag on the book record.
 
-You:  /opsx:new optimize-product-list-fetching
+You:  /opsx:new book-grouping-by-theme
 
 You:  /opsx:continue
 AI:   Creating proposal based on our exploration...
@@ -316,7 +318,7 @@ Change B: /opsx:new ──► /opsx:ff ──────► /opsx:apply
 
 Resume a named change explicitly:
 #+begin_example
-/opsx:apply add-dark-mode
+/opsx:apply book-status-toggle
 #+end_example
 
 The agent picks up from the last completed task in
@@ -327,19 +329,19 @@ them:
 #+begin_example
 You:  /opsx:bulk-archive
 AI:   Found 3 completed changes:
-      - add-dark-mode
-      - fix-login-redirect
-      - update-footer
+      - book-tracker-crud
+      - fix-status-transition
+      - book-grouping-by-theme
 
-      ⚠ add-dark-mode and update-footer both touch specs/ui/
+      ⚠ book-tracker-crud and book-grouping-by-theme both touch specs/books/
       Resolving by chronological order of implementation…
 
       Archive all 3?
 
 You:  Yes
-AI:   ✓ Archived add-dark-mode
-      ✓ Archived fix-login-redirect
-      ✓ Archived update-footer
+AI:   ✓ Archived book-tracker-crud
+      ✓ Archived fix-status-transition
+      ✓ Archived book-grouping-by-theme
 #+end_example
 
 Bulk archive detects conflicts when multiple changes touch the
@@ -357,22 +359,11 @@ implemented.
    This creates =.claude/skills/openspec-*/SKILL.md= and sets up
    the workflow commands.
 
-2. Optionally create =openspec/config.yaml= for project defaults:
-   #+begin_src yaml
-   schema: spec-driven
-   context: |
-     Tech stack: TypeScript, React, TanStack Start
-     Database: node:sqlite (built-in)
-     Testing: Vitest for unit tests
-     Style: ESLint with Prettier, strict TypeScript
-   rules:
-     proposal:
-       - Include success criteria
-     specs:
-       - Use Given/When/Then format for scenarios
-     design:
-       - Include component diagrams for complex flows
-   #+end_src
+2. For this project, =openspec/config.yaml= is already configured.
+   The schema, full tech stack context (TanStack Start, node:sqlite,
+   XState, dotenvx, ADRs, style guide), developer quality gates, and
+   review criteria are all inlined and injected into every agent
+   automatically. See =openspec/config.yaml= for the full content.
 
 3. Attach MCP servers (Context7 for docs, Serena for code
    symbols) so agents can search effectively.
@@ -446,15 +437,15 @@ openspec/
 
 Two key directories:
 - *=specs/=* — The source of truth. Describes how your system
-  currently behaves. Organised by domain (e.g. =specs/auth/=,
-  =specs/payments/=).
+  currently behaves. Organised by domain (e.g. =specs/books/=,
+  =specs/status/=).
 - *=changes/=* — Proposed modifications. Each change gets its
   own folder. When complete, its specs merge into the main
   =specs/= directory.
 
 *Best practices*:
 - Pick a short, descriptive name (kebab-case). Examples:
-  =add-dark-mode=, =fix-login-bug=, =book-tracker-crud=.
+  =book-tracker-crud=, =fix-status-transition=, =book-grouping-by-theme=.
 - Keep the description focused. One feature per change.
 
 ** Round 3: Build the Planning Artifacts
@@ -547,28 +538,35 @@ describe what is changing relative to your current specs.
 They use three sections:
 
 #+begin_src markdown
-# Delta for Auth
+# Delta for Books
 
 ## ADDED Requirements
 
-### Requirement: Two-Factor Authentication
-The system MUST require a second factor during login.
+### Requirement: Book grouping by theme
+The system SHALL display books grouped by their theme tag on the list page.
 
-#### Scenario: OTP required
-- GIVEN a user with 2FA enabled
-- WHEN the user submits valid credentials
-- THEN an OTP challenge is presented
+#### Scenario: Books with the same theme are grouped
+- WHEN the user views the book list
+- THEN books sharing a theme tag are displayed under a shared heading
+
+#### Scenario: Books with no theme are grouped separately
+- WHEN a book has no theme tag
+- THEN it appears under an "Untagged" heading
 
 ## MODIFIED Requirements
 
-### Requirement: Session Timeout
-The system SHALL expire sessions after 30 minutes of inactivity.
-(Previously: 60 minutes)
+### Requirement: Add book form
+The system SHALL include an optional theme tag field when adding a book.
+(Previously: title, author, how-heard, expectations only)
+
+#### Scenario: User adds a book with a theme
+- WHEN the user submits the add-book form with a theme value
+- THEN the book is stored with that theme tag
 
 ## REMOVED Requirements
 
-### Requirement: Remember Me
-(Deprecated in favour of 2FA)
+### Requirement: Flat book list
+(Superseded by grouped list view)
 #+end_src
 
 When you archive a change, OpenSpec processes these sections:
@@ -583,10 +581,12 @@ When you archive a change, OpenSpec processes these sections:
 
 *Goal*: turn the tasks into working, tested code.
 
-1. Create a branch for the work:
+1. Create a branch for the work, named after the phase:
    #+begin_src bash
-   git checkout -b feature/my-feature-name
+   git checkout -b phase-2-data-layer
    #+end_src
+   Branch naming convention: =phase-N-<short-description>=.
+   One branch per logical phase of a change.
 
 2. Start implementation:
    #+begin_example
@@ -673,9 +673,9 @@ satisfied.
    Example output:
    #+begin_example
    COMPLETENESS
-   ✓ All 12 tasks in tasks.md are checked
+   ✓ All 8 tasks in tasks.md are checked
    ✓ All requirements in specs have corresponding code
-   ⚠ Scenario "Session timeout after inactivity" not tested
+   ⚠ Scenario "Books with no theme are grouped separately" not tested
 
    CORRECTNESS
    ✓ Implementation matches spec intent
@@ -683,7 +683,7 @@ satisfied.
 
    COHERENCE
    ✓ Design decisions reflected in code structure
-   ⚠ Design mentions "event-driven" but implementation uses polling
+   ⚠ Design specifies SQL GROUP BY but implementation groups in component
 
    Critical issues: 0  /  Warnings: 2  /  Ready to archive: Yes
    #+end_example
@@ -707,7 +707,7 @@ satisfied.
 4. Merge the branch:
    #+begin_src bash
    git checkout main
-   git merge feature/my-feature-name
+   git merge phase-2-data-layer
    #+end_src
 
 * Decision Guide: Update vs. New Change
@@ -748,14 +748,14 @@ fresh:
 UPDATE            NEW UPDATE          NEW UPDATE           NEW
 #+end_example
 
-** Concrete Example: "Add dark mode"
+** Concrete Example: "book-tracker-crud"
 
-- "Need to also support custom themes" → *New change*
-  (scope exploded beyond original intent).
-- "System preference detection is harder than expected" → *Update*
-  (same intent, learning-driven correction).
-- "Let's ship toggle first, add preferences later" → *Update*,
-  then archive, then start a new change for preferences.
+- "Let's also add search and filtering while we're at it" → *New change*
+  (scope exploded; CRUD is completable without search).
+- "node:sqlite API works differently than expected for transactions" → *Update*
+  (same intent, learning-driven correction to the design).
+- "Let's ship list + add first, edit/delete in a follow-up" → *Update*
+  to scope the change to Phase 2–4, then archive, then new change for Phase 5.
 
 The principle:
 #+begin_quote
@@ -774,12 +774,12 @@ Choose new when starting fresh would be clearer than patching.
 /opsx:new my-feature   ← Formalise it
 /opsx:ff               ← Generate all planning artifacts
                           (or /opsx:continue × 4 for incremental)
-git checkout -b feature/my-feature
+git checkout -b phase-N-description
 /opsx:apply            ← Implement (TDD, small commits)
                           ← Review loop (Developer ↔ Reviewer)
 /opsx:verify           ← Check completeness
 /opsx:archive          ← Archive completed work
-git checkout main && git merge feature/my-feature
+git checkout main && git merge phase-N-description
 #+end_example
 
 ** Checking Status
@@ -845,9 +845,9 @@ Schemas live in =openspec/schemas/= (project-local) or
 - *Vague change names*: good names make =openspec list= useful.
 
   #+begin_example
-  Good:                     Avoid:
-  add-dark-mode             feature-1
-  fix-login-redirect        update
-  optimize-product-query    changes
-  implement-2fa             wip
+  Good:                        Avoid:
+  book-tracker-crud            feature-1
+  fix-status-transition        update
+  book-grouping-by-theme       changes
+  add-book-expectations-field  wip
   #+end_example

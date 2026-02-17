@@ -100,5 +100,7 @@ and commands reference
 https://github.com/Fission-AI/OpenSpec/blob/main/docs/commands.md
 
 [fn:3] https://github.com/vadimdemedes/ink
+
 [fn:2] https://frankentui.com/web_react
+
 [fn:1] https://bootcamp.dev/
