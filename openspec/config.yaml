@@ -108,17 +108,20 @@ context: |
   5. Commit with a descriptive message
   Never implement a feature before writing its test.
 
-  ### Git Workflow
-  - One branch per change: fetch origin, then create a branch and worktree from origin/main:
+  ### Git Workflow (Trunk-Based Development — ADR 0007)
+  - One short-lived branch per task group, created from the current HEAD of main:
       git fetch origin
-      git worktree add ../OpenSpec-<change-name> -b feature/<change-name> origin/main
-  - All implementation work happens inside the worktree directory, never in the main checkout
+      git worktree add ../OpenSpec-<change-name>-phase-<N> -b <change-name>/phase-<N>-<group> origin/main
+  - Branch naming: <change-name>/phase-<N>-<group> (e.g. scaffold-and-pipes/phase-3-dotenvx)
+  - Worktree naming: ../OpenSpec-<change-name>-phase-<N> (e.g. ../OpenSpec-scaffold-and-pipes-phase-3)
+  - All implementation work for a task group happens inside that group's worktree
+  - When Reviewer approves a group, the branch is merged to main before the next group begins
+  - The human makes the merge decision — the agent never merges; draft pr.md if needed
   - Never delete branches (git branch -d/-D is forbidden)
   - Never delete worktrees (git worktree remove is forbidden)
   - Commit after each passing test — smallest logical unit
   - Commit message format: phase-N: describe what changed and why
   - Do not push to remote until the Reviewer approves
-  - Do not merge multiple changes into one branch
 
   ### Pre-Commit Gates — all must pass before every commit
   - npm run typecheck — zero TypeScript errors

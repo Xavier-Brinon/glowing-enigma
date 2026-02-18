@@ -9,25 +9,26 @@
 
 ## 1. Project Scaffold
 
-- [ ] 1.0 Run pwd to confirm you are in ../OpenSpec-scaffold-and-pipes; cd into it if not
-- [ ] 1.1 Run `npx @tanstack/cli@latest create` to initialise the project inside the worktree
-- [ ] 1.2 Delete scaffold boilerplate routes and components not needed for this change
-- [ ] 1.3 Verify TypeScript strict mode is enabled in `tsconfig.json` (`"strict": true`)
-- [ ] 1.4 Create `.nvmrc` with `24.13`
-- [ ] 1.5 Run `nvm use` and confirm the correct Node version is active
-- [ ] 1.6 Run `npm run typecheck` — zero errors
-- [ ] 1.R Reviewer sign-off → Review-phase1-project-scaffold.md
+- [x] 1.0 Run pwd to confirm you are in ../OpenSpec-scaffold-and-pipes; cd into it if not
+- [x] 1.1 Run the scaffold command inside the worktree (--no-git prevents a nested git repo):
+        `npx @tanstack/cli@latest create book-tracker --framework React --no-examples --no-toolchain --no-git --package-manager npm --target-dir . --force`
+- [x] 1.2 Delete scaffold boilerplate routes and components not needed for this change
+- [x] 1.3 Verify TypeScript strict mode is enabled in `tsconfig.json` (`"strict": true`)
+- [x] 1.4 Create `.nvmrc` with `24.13`
+- [x] 1.5 Run `nvm use` and confirm the correct Node version is active
+- [x] 1.6 Run `npm run typecheck` — zero errors
+- [x] 1.R Reviewer sign-off → Review-phase1-project-scaffold.md
 
 ## 2. Oxlint + Oxfmt
 
-- [ ] 2.0 Run pwd to confirm you are in ../OpenSpec-scaffold-and-pipes; cd into it if not
-- [ ] 2.1 Install `oxlint` and `oxfmt` as devDependencies
-- [ ] 2.2 Add `npm run lint` script: `oxlint .`
-- [ ] 2.3 Add `npm run format` script: `oxfmt --write .`
-- [ ] 2.4 Add `npm run format:check` script: `oxfmt --check .`
-- [ ] 2.5 Run `npm run lint` — zero violations
-- [ ] 2.6 Run `npm run format` then `npm run format:check` — exits 0
-- [ ] 2.R Reviewer sign-off → Review-phase2-oxlint-oxfmt.md
+- [x] 2.0 Run pwd to confirm you are in ../OpenSpec-scaffold-and-pipes; cd into it if not
+- [x] 2.1 Install `oxlint` and `oxfmt` as devDependencies
+- [x] 2.2 Add `npm run lint` script: `oxlint .`
+- [x] 2.3 Add `npm run format` script: `oxfmt --write .`
+- [x] 2.4 Add `npm run format:check` script: `oxfmt --check .`
+- [x] 2.5 Run `npm run lint` — zero violations
+- [x] 2.6 Run `npm run format` then `npm run format:check` — exits 0
+- [x] 2.R Reviewer sign-off → Review-phase2-oxlint-oxfmt.md
 
 ## 3. dotenvx
 

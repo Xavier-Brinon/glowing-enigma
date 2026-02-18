@@ -1,0 +1,207 @@
+#+title: Adopt Trunk-Based Development as the Branching Model
+#+author: HaQadosch
+#+date: [2026-02-18 Tue]
+#+startup: indent
+* Status
+
+Accepted
+
+* Context and Problem Statement
+
+The initial OpenSpec workflow uses one long-lived branch per change
+(=feature/<change-name>=), created at the start and merged only after
+the Reviewer has approved every task group. This is a feature-branch
+model.
+
+As the project grows, this approach accumulates risk:
+
+- Changes stay unintegrated for days or weeks, increasing the
+  likelihood of conflicts when they finally land in =main=.
+- Regressions are harder to bisect because many unrelated changes
+  arrive in a single merge commit.
+- =main= only reflects working, reviewed code intermittently — not
+  continuously.
+- The "merge at the end" habit creates psychological pressure to avoid
+  breaking up large changes into smaller ones.
+
+[[https://trunkbaseddevelopment.com/][Trunk-Based Development (TBD)]] is a branching model where developers
+keep branches short-lived (≤ 2 days) and integrate back to
+=main= (trunk) continuously, rather than accumulating work on a
+long-lived feature branch.
+
+* Options Considered
+
+** Long-lived feature branch (current approach)
+
+One branch per OpenSpec change (e.g. =feature/scaffold-and-pipes=).
+All task groups are committed to that branch. Merge to =main= only
+after the Reviewer approves the final task group.
+
+Pros:
+- Simple mental model — one change, one branch
+- No merge activity until the change is complete
+- Familiar to developers from Gitflow backgrounds
+
+Cons:
+- Branch can live for days or weeks — diverges from =main= over time
+- Single large merge commit obscures the granular history
+- =main= never reflects the partially-complete-but-working state
+- Makes it harder to start a dependent change while the first is in
+  review
+- Violates the TBD principle that shared long-lived branches are
+  harmful at any release cadence
+
+** Direct commits to trunk (TBD — small team variant)
+
+Commit every passing change directly to =main= with no branch at all.
+
+Pros:
+- Maximum integration frequency
+- No branch management overhead
+
+Cons:
+- No code review gate before code lands in =main=
+- Risky without a CI server to catch broken builds immediately
+- Not appropriate until CI is established
+
+** Short-lived branches per task group (TBD — scaled variant)
+
+One short-lived branch per task group (=scaffold/phase-N=), created
+from =main=, worked on by one developer, reviewed, and merged back to
+=main= before the next task group begins. Branches live ≤ 2 days.
+
+Pros:
+- =main= continuously reflects reviewed, working code
+- Each merge is small and focused — easy to bisect regressions
+- No long-lived divergence from =main=
+- Aligns with TBD's core rule: short-lived branches only
+- Reviewer sign-off triggers an immediate merge — not a queued one
+- Dependent changes can branch from a known-good =main= HEAD
+
+Cons:
+- More branch creation and merge operations than the feature-branch model
+- Requires the human to merge (or approve a merge) at the end of each
+  task group
+- Slightly more cognitive overhead per task group
+
+* Decision
+
+Adopt [[https://trunkbaseddevelopment.com/short-lived-feature-branches/][short-lived feature branches]] (one per task group) as the
+branching model for all OpenSpec changes.
+
+** Continuous Integration of Reviewed Code
+
+Each task group represents a coherent, independently-reviewable unit
+of work. When the Reviewer approves a group, the code is
+production-worthy as-is. There is no reason to hold it out of =main=
+while subsequent groups are worked on. Merging immediately keeps
+=main= in a continuously releasable state.
+
+** Smaller Merges, Clearer History
+
+A merge that contains only the changes from one task group (e.g.
+"Oxlint + Oxfmt wired up") is trivially understandable in =git log=.
+A merge that contains all seven phases of a change is not. Small
+merges also make =git bisect= useful.
+
+** Eliminates Divergence Risk
+
+A branch that lives for the duration of a single task group (hours to
+a day at most) will almost never have a merge conflict. A branch that
+lives for the entire duration of a change (potentially a week) will.
+
+** Aligns with TBD's Core Principle
+
+TBD's rule is unambiguous: /resist any pressure to create long-lived
+development branches/. A task group branch that is merged and deleted
+the same day it is created is the canonical TBD short-lived branch.
+
+** Scope and Constraints
+
+- One branch per task group, named =<change-name>/phase-<N>-<group>=
+  (e.g. =scaffold-and-pipes/phase-3-dotenvx=).
+- Branch is created from the current HEAD of =main= at the start of
+  each task group.
+- All commits for that task group go on that branch.
+- Reviewer sign-off (=X.R=) is the gate. Once approved, the branch is
+  merged to =main= and the next task group creates a fresh branch from
+  the new =main= HEAD.
+- The human makes the merge decision — the agent never merges without
+  explicit user approval.
+- Branches are not deleted by the agent (per existing policy).
+- Worktrees follow the same convention: one worktree per task group,
+  named =../OpenSpec-<change-name>-phase-<N>=.
+
+* Consequences
+
+** Positive
+
+- =main= always contains only reviewed, passing code
+- Git history is granular and semantically meaningful per task group
+- No long-lived divergence; merge conflicts are rare
+- Dependent changes can start from a known-good =main= HEAD
+  immediately after the previous group merges
+- Aligns with industry best practice (Google, Facebook, continuous
+  delivery literature)
+
+** Negative
+
+- More branch and worktree creation operations per change
+- The human must explicitly merge (or approve a draft PR) at each
+  task group boundary — cannot batch up merges at the end
+- Slightly more overhead for small, trivial task groups
+
+** Mitigation
+
+- The OpenSpec =tasks.md= template is updated so that task =X.0=
+  creates the branch and worktree from =main= (not from the previous
+  task group's branch), making the correct flow the default
+- The =X.R= Reviewer sign-off task explicitly states that approval
+  unblocks a merge to =main= before proceeding
+- Merging remains a human decision; the agent drafts a =pr.md= if a
+  formal description is needed
+
+* Impact on Workflow
+
+Old flow (feature-branch model):
+
+#+begin_src
+main ──●────────────────────────────────────────────────►
+       └─────── feature/scaffold-and-pipes ──────────────► (merge at end)
+#+end_src
+
+New flow (TBD short-lived branches):
+
+#+begin_src
+main ──●─────●──────────●──────────●──────────●─────────►
+       │     ▲          ▲          ▲          ▲
+       │  phase-1 ──────┘          │          │
+       │          phase-2 ─────────┘          │
+       │                    phase-3 ──────────┘
+       ...
+#+end_src
+
+Task group naming convention:
+
+#+begin_src
+scaffold-and-pipes/phase-1-project-scaffold
+scaffold-and-pipes/phase-2-oxlint-oxfmt
+scaffold-and-pipes/phase-3-dotenvx
+...
+#+end_src
+
+Worktree naming convention:
+
+#+begin_src
+../OpenSpec-scaffold-and-pipes-phase-1
+../OpenSpec-scaffold-and-pipes-phase-2
+...
+#+end_src
+
+* References
+
+- [[https://trunkbaseddevelopment.com/][Trunk-Based Development — Paul Hammant]]
+- [[https://trunkbaseddevelopment.com/short-lived-feature-branches/][Short-Lived Feature Branches — TBD site]]
+- [[https://trunkbaseddevelopment.com/continuous-integration/][Continuous Integration — TBD site]]
+- /Continuous Delivery/ — Humble & Farley (2010)
+- /The DevOps Handbook/ — Kim, Humble, Debois, Willis (2016)

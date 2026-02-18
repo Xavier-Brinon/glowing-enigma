@@ -275,6 +275,8 @@ I should ensure this is trunk based and each steps in ~/opsx:apply~
 should be merged to main, not each feature. As for the CICD, this app
 is mainly for local users. Not meant to be on the web.
 
+Create new [[file:ADR/0007-trunk-based-development.org][ADR]] to put TBD in place.
+
 * Footnotes
 
 [fn:5] https://github.com/Fission-AI/OpenSpec/issues/721

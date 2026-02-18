@@ -155,43 +155,41 @@ artifacts:
 
 
       Guidelines:
-      - ALWAYS start with ## 0. Git Setup as the first group. It MUST contain
-        exactly these four tasks:
-          - [ ] 0.1 Run `git fetch origin` to get the latest remote state
-          - [ ] 0.2 Create worktree and branch from origin/main:
-                  `git worktree add ../OpenSpec-<change-name> -b feature/<change-name> origin/main`
-          - [ ] 0.3 Confirm worktree is active and on the correct branch
-          - [ ] 0.4 Switch into the worktree directory for all subsequent work:
-                  `cd ../OpenSpec-<change-name>`
-      - Replace <change-name> with the actual change name in all commands above.
-      - Group remaining tasks under ## numbered headings starting at ## 1.
-      - ALWAYS add `- [ ] X.0 Run pwd to confirm you are in the worktree
-        directory; cd into it if not` as the FIRST task in every group from
-        ## 1. onwards. This guards against shell restarts that may leave the
-        agent in the wrong directory.
+      - Do NOT include a ## 0. Git Setup group. Under TBD (ADR 0007), each
+        task group gets its own branch and worktree created at the start of
+        that group. Git setup is embedded in every group's X.0 task.
+      - Group tasks under ## numbered headings starting at ## 1.
+      - ALWAYS make the FIRST two tasks in every group the TBD git setup:
+          - [ ] X.0 Run `git fetch origin` and create branch + worktree from origin/main:
+                  `git worktree add ../OpenSpec-<change-name>-phase-<N> -b <change-name>/phase-<N>-<group> origin/main`
+                  then `cd ../OpenSpec-<change-name>-phase-<N>`
+          - [ ] X.1 Run pwd to confirm you are in ../OpenSpec-<change-name>-phase-<N>; cd into it if not
+      - Replace <change-name>, <N>, and <group> with actual values for each group.
+      - Renumber remaining tasks starting at X.2 onwards.
       - ALWAYS add `- [ ] X.R Reviewer sign-off` as the FINAL task in every
-        group from ## 1. onwards (where R is the next number after the last
-        task in that group). This triggers the review loop described below.
+        group (where R is the next number after the last task in that group).
+        This triggers the review loop described below. After the reviewer
+        approves, the human merges the branch to main before the next group
+        begins.
       - Each task MUST be a checkbox: `- [ ] X.Y Task description`
       - Tasks should be small enough to complete in one session
       - Order tasks by dependency (what must be done first?)
 
-      Review loop (mandatory at the end of every task group):
-      - After completing all other tasks in a group, launch a sub-agent using
-        the Reviewer persona defined in `personas/reviewer.md`.
-      - Instruct the sub-agent to review only the work done in that group
-        (not the entire change).
-      - The sub-agent writes its findings to a draft file named
-        `openspec/changes/<change-name>/Review-phase<N>-<group-name>.md`
-        (e.g. Review-phase1-project-scaffold.md). Use kebab-case for the
-        group name derived from the ## heading.
-      - If the reviewer raises [critical] or [important] issues:
-        1. Fix each issue.
-        2. Launch the Reviewer sub-agent again on the same group.
-        3. Repeat until the reviewer writes "## Approved" in the draft file.
-      - Only then mark `- [x] X.R Reviewer sign-off` and move to the next group.
-      - [nice-to-have] issues do not block sign-off but MUST be recorded in
-        the review draft.
+      Review loop (mandatory at the end of every task group): - After
+      completing all other tasks in a group, launch a sub-agent using
+      the Reviewer persona defined in `personas/reviewer.md`. -
+      Instruct the sub-agent to review only the work done in that
+      group (not the entire change). - The sub-agent writes its
+      findings to a draft file named
+      `openspec/changes/<change-name>/Review-phase<N>-<group-name>.md`
+      (e.g. Review-phase1-project-scaffold.md). Use kebab-case for the
+      group name derived from the ## heading. - If the reviewer raises
+      [critical] or [important] issues: 1. Fix each issue. 2. Launch
+      the Reviewer sub-agent again on the same group. 3. Repeat until
+      the reviewer writes "## Approved" in the draft file. - Only then
+      mark `- [x] X.R Reviewer sign-off` and wait for human to merge
+      to main before moving to the next group. - [nice-to-have] issues
+      do not block sign-off but MUST be recorded in the review draft.
 
       Example:
 
@@ -226,14 +224,20 @@ apply:
     - tasks
   tracks: tasks.md
   instruction: |
-    Before starting any implementation:
-    1. Ensure a git worktree exists for this change. If not, create one:
-         git fetch origin
-         git worktree add ../OpenSpec-<change-name> -b feature/<change-name> origin/main
-    2. Switch into the worktree directory:
-         cd ../OpenSpec-<change-name>
-    3. All implementation work MUST happen inside the worktree, never in the main checkout.
-    4. Never delete the branch or worktree after implementation.
+    This project uses Trunk-Based Development (ADR 0007): one short-lived branch
+    and worktree per task group, each created from origin/main at group start.
+
+    Before starting each task group:
+    1. Run `git fetch origin` to get the latest main HEAD.
+    2. Create a new branch and worktree from origin/main:
+         git worktree add ../OpenSpec-<change-name>-phase-<N> -b <change-name>/phase-<N>-<group> origin/main
+    3. Switch into the new worktree:
+         cd ../OpenSpec-<change-name>-phase-<N>
+    4. All implementation work for this group MUST happen inside that worktree.
+    5. Never delete branches (git branch -d/-D is forbidden).
+    6. Never delete worktrees (git worktree remove is forbidden).
+    7. When the Reviewer approves the group, the human merges the branch to main.
+       Do not begin the next group until the merge is complete.
 
     Then: read context files, work through pending tasks, mark complete as you go.
     Pause after each task group and wait for user confirmation before proceeding to the next.
