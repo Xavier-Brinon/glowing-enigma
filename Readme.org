@@ -197,6 +197,52 @@ like to have the linter, formatter from [[https://oxc.rs/][OXC]] to replace the 
 eslint and prettier.
 So I'm asking *Claude* to update the docs accordingly and create an [[file:ADR/0006-oxc-for-linting-and-formatting.org][ADR]].
 
+#+begin_src bash
+  /opsx:continue
+#+end_src
+This creates a [[file:openspec/changes/scaffold-and-pipes/tasks.md][tasks.md]] file.
+I can review each of them in case I need to adjust any one of them.
+
+#+begin_src bash
+  # Verify all artifacts complete
+  $ openspec status --change "scaffold-and-pipes"
+
+  - Loading change status...
+  Change: scaffold-and-pipes
+  Schema: book-app-workflow
+  Progress: 4/4 artifacts complete
+
+  [x] proposal
+  [x] design
+  [x] specs
+  [x] tasks
+
+  All artifacts complete!
+#+end_src
+
+The openspec created 7 tasks:
+- 0. Git Setup :: fetch origin, create worktree + branch from
+  origin/main
+- 1. Project Scaffold :: TanStack Start CLI, strip boilerplate, verify
+  strict TypeScript, pin .nvmrc to 24.13, typecheck passes
+- 2. Oxlint + Oxfmt :: install both, wire the three npm scripts (lint,
+  format, format:check), confirm both pass
+- 3. dotenvx :: install + prefix npm run dev, set DATABASE_PATH,
+  confirm .env.keys is gitignored
+- 4. Database Connection :: write failing test first, create
+  src/lib/db.ts with error guard, test passes, commit
+- 5. Vitest Smoke Test :: confirm test runner is wired, at least one
+  passing test
+- 6. Default Page :: __root.tsx renders a placeholder, npm run dev
+  serves it cleanly at localhost:3000
+- 7. Pre-Commit Verification :: typecheck + lint + format:check +
+  tests all pass, final commit
+
+I'll have to make sure that the TanStack CLI is being used correctly
+at step 1.
+** opsx:apply -> 1 step at a time
+
+
 * Footnotes
 
 [fn:5] https://github.com/Fission-AI/OpenSpec/issues/721
