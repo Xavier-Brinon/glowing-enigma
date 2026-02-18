@@ -19,11 +19,32 @@ The Developer/Reviewer loop repeats until the Reviewer is satisfied, then the br
 
 ## OpenSpec Structure
 
-- `specs/` — contains `requirements.md` (or `proposal.md`) and `design.md`
-- `changes/` — individual change specs created via `openspec new-change <name>`
-- `tasks.md` — tracks implementation progress
-- Initialize with: `openspec init` (select `claude-code`)
-- Apply a change with: `/opsx apply <change-name>`
+OpenSpec lives entirely in the `openspec/` directory at the repo root:
+
+```
+openspec/
+├── config.yaml          # Authoritative project context injected into every agent
+├── schemas/             # JSON schemas for artifact validation
+├── standards/           # Human-readable quality gates (kept in sync with config.yaml)
+├── specs/               # Project-level specs (not change-specific)
+└── changes/
+    ├── <change-name>/   # Active change containers
+    │   ├── proposal.md  # Why: motivation and high-level scope
+    │   ├── specs/       # What: WHEN/THEN requirement scenarios per capability
+    │   ├── design.md    # How: architecture decisions and technical plan
+    │   └── tasks.md     # Checklist driving implementation
+    └── archive/
+        └── YYYY-MM-DD-<change-name>/  # Completed changes preserved as decision history
+```
+
+Key commands:
+- Initialize: `openspec init` (select `claude-code`)
+- Create a change: `openspec new change <name>`
+- Check status: `openspec status`
+- Apply a change: `/opsx:apply <change-name>`
+- Archive when done: move change folder to `openspec/changes/archive/YYYY-MM-DD-<name>/`
+
+Slash commands live in `.claude/commands/opsx/` and skills in `.claude/skills/`.
 
 ## Development Conventions
 
@@ -40,3 +61,17 @@ The Developer/Reviewer loop repeats until the Reviewer is satisfied, then the br
   - Formatting: delegated to Prettier
   - State: XState for entity lifecycles (book status), plain `useState` for trivial UI only
   - Simplicity: no premature abstractions, no duplicated state, zero technical debt
+
+## Git & PR Policy
+
+- **Never push to remote**: do not run `git push` unless the user explicitly requests it
+- **Draft PRs as local files**: when a PR description is needed, write it to a markdown file (e.g., `openspec/changes/<name>/pr.md`) instead of opening a GitHub PR
+- **One branch per change**: for every new feature or change, create a dedicated branch and a git worktree:
+  ```bash
+  git worktree add ../OpenSpec-<change-name> -b feature/<change-name>
+  ```
+  All implementation work for that change happens inside its worktree directory.
+- **Never delete branches**: branches are preserved as history; do not run `git branch -d` or `git branch -D`
+- **Never delete worktrees**: do not run `git worktree remove`; worktrees are kept alongside the main checkout
+- **Commit after each passing test**: smallest logical unit; message format: `phase-N: describe what changed and why`
+- **Do not merge**: merging is a human decision made after Reviewer approval

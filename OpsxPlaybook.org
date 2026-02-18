@@ -785,7 +785,7 @@ git checkout main && git merge phase-N-description
 ** Checking Status
 
 #+begin_src bash
-openspec status --change "my-feature"
+  openspec status --change "my-feature"
 #+end_src
 
 Shows which artifacts are BLOCKED, READY, or DONE.
@@ -793,10 +793,10 @@ Shows which artifacts are BLOCKED, READY, or DONE.
 ** Other Useful CLI Commands
 
 #+begin_src bash
-openspec list                    # List all active changes
-openspec show my-feature         # View details of a change
-openspec validate my-feature     # Validate spec formatting
-openspec view                    # Open the interactive dashboard
+  openspec list                    # List all active changes
+  openspec show my-feature         # View details of a change
+  openspec validate my-feature     # Validate spec formatting
+  openspec view                    # Open the interactive dashboard
 #+end_src
 
 ** Complete Command Reference

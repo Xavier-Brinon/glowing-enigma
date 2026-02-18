@@ -51,6 +51,7 @@ Thinking about:
 - [[https://github.com/tigerbeetle/tigerbeetle/blob/main/docs/TIGER_STYLE.md][Tigerbeetle]] style
 - local first, CRDT database
 - pure SSH app
+- Fuzzy test ?
 
 After some discussions worthy of 2 ADRs, we have the tech stack. Now I
 can create the 4 personnas.
@@ -90,9 +91,108 @@ order during the same session.
 
 We could inject some of the 4 personas config into the *opsx*
 different configuration files.
+** update the claude.md file
+I ask claude to update it's [[file:CLAUDE.md][claude.md]] file accordingly.
+* Step 3: Scaffold and pipes
+** opsx:new
+Let's start with creating the basic scaffold for the project.
+#+begin_src bash
+  /opsx:new scaffold-and-pipes
+#+end_src
+*** TODO display the todo list in Opencode right tab
+Opencode can display lots of useful info:
+- Context
+- MCP
+- LSP
+- Modified Files
+- Git branch
+- and sometimes the todo from Claude
+
+Try and include the opsx todo in the Claude todo.
+Also try and include the current folder/worktree
+*** Numbering opsx artifacts
+Opened a ticket to opsx repo about numbering the artifacts, a la madr,
+and proposing the idea of artifact explorer like docusorus and the like.[fn:5]
+** opsx:continue -> design
+To check the current status (or *change* in opsx parlance) of the
+project as a whole, with all the current tasks:
+#+name: openspec list
+#+begin_src bash
+  openspec list
+#+end_src
+
+#+RESULTS: openspec list
+: Changes:
+:   scaffold-and-pipes     No tasks      1h ago
+
+I can see there is a task in "progress".
+Let's focus on that one:
+#+name: openspec status 1
+#+begin_src bash
+  openspec status --change scaffold-and-pipes
+#+end_src
+
+#+RESULTS: openspec status 1
+: Change: scaffold-and-pipes
+: Schema: book-app-workflow
+: Progress: 1/4 artifacts complete
+:
+: [x] proposal
+: [ ] design
+: [ ] specs
+: [-] tasks (blocked by: design, specs)
+
+I could use ~openspec show scaffold-and-pipes~ to see the content as well.
+At this stage, this would be the [[file:openspec/changes/scaffold-and-pipes/proposal.md][proposal]].
+Based on the progress track, next step is *design*.
+
+#+begin_src bash
+  /opsx:continue
+#+end_src
+
+It created the [[file:openspec/changes/scaffold-and-pipes/design.md][design]] doc.
+
+It wanted to pin the node version to v22 but the latest LTS for node
+is [[https://nodejs.org/en/blog/release/v24.13.1][v24.13]], so forced the change.
+
+#+begin_src bash
+  Created: design.md
+  Progress: 2/4 — design done, tasks now only blocked by specs.
+  [x] proposal
+  [x] design
+  [ ] specs     ← next
+  [-] tasks     (blocked by: specs)
+#+end_src
+** opsx:continue -> spec
+For the specs, it creates a new type of artifacts, in [[file:openspec/changes/scaffold-and-pipes/specs/project-scaffold/spec.md][spec.md]]
+
+#+begin_src bash
+  Created: specs/project-scaffold/spec.md
+  Progress: 3/4 — only tasks remaining, now unblocked.
+
+  [x] proposal
+  [x] design
+  [x] specs
+  [ ] tasks     ← next
+
+  Six requirements defined, each with testable WHEN/THEN scenarios:
+  1. App builds and serves a default page
+  2. Node.js version pinned (24.13 LTS)
+  3. Environment variables via dotenvx
+  4. Database connection module exists
+  5. Vitest smoke test passes
+  6. Prettier configured and passing
+
+  Want to continue with tasks?
+#+end_src
+
+
 
 
 * Footnotes
+
+[fn:5] https://github.com/Fission-AI/OpenSpec/issues/721
+
 [fn:4] https://github.com/Fission-AI/OpenSpec/blob/main/docs/opsx.md
 There is also the getting started that looks like a nice run through.
 https://github.com/Fission-AI/OpenSpec/blob/main/docs/getting-started.md

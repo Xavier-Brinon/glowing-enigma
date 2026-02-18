@@ -14,7 +14,7 @@ context: |
   - Router:      TanStack Router (built into Start, src/routes/*.tsx)
   - Data:        TanStack Query (useQuery / useMutation, built into Start)
   - Server:      createServerFn — no Express, no REST API, no separate process
-  - Database:    node:sqlite (Node.js built-in, experimental, requires Node 22.5+)
+  - Database:    node:sqlite (Node.js built-in, stable as of Node 24; requires Node 24.13 LTS+)
   - State:       XState for entity lifecycles; plain useState for trivial UI only
   - Env vars:    dotenvx (encrypted .env committed to git; .env.keys gitignored)
   - Language:    TypeScript strict mode throughout — no `any` types
@@ -29,7 +29,7 @@ context: |
   - Book lifecycle: to-read → reading → done (modelled as XState machine)
   - Status transitions go through send({ type: 'EVENT' }), never direct string assignment
   - Input validation via inputValidator on every createServerFn
-  - Node.js version pinned via .nvmrc (22.5+)
+  - Node.js version pinned via .nvmrc (24.13 LTS)
 
   ## Project Structure
   src/
