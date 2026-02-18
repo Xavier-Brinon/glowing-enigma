@@ -155,7 +155,20 @@ artifacts:
 
 
       Guidelines:
-      - Group related tasks under ## numbered headings
+      - ALWAYS start with ## 0. Git Setup as the first group. It MUST contain
+        exactly these four tasks:
+          - [ ] 0.1 Run `git fetch origin` to get the latest remote state
+          - [ ] 0.2 Create worktree and branch from origin/main:
+                  `git worktree add ../OpenSpec-<change-name> -b feature/<change-name> origin/main`
+          - [ ] 0.3 Confirm worktree is active and on the correct branch
+          - [ ] 0.4 Switch into the worktree directory for all subsequent work:
+                  `cd ../OpenSpec-<change-name>`
+      - Replace <change-name> with the actual change name in all commands above.
+      - Group remaining tasks under ## numbered headings starting at ## 1.
+      - ALWAYS add `- [ ] X.0 Run pwd to confirm you are in the worktree
+        directory; cd into it if not` as the FIRST task in every group from
+        ## 1. onwards. This guards against shell restarts that may leave the
+        agent in the wrong directory.
       - Each task MUST be a checkbox: `- [ ] X.Y Task description`
       - Tasks should be small enough to complete in one session
       - Order tasks by dependency (what must be done first?)
@@ -163,11 +176,19 @@ artifacts:
       Example:
 
       ```
+      ## 0. Git Setup
+      - [ ] 0.1 Run `git fetch origin` to get the latest remote state
+      - [ ] 0.2 Create worktree and branch from origin/main: ...
+      - [ ] 0.3 Confirm worktree is active and on the correct branch
+      - [ ] 0.4 Switch into the worktree directory: `cd ../OpenSpec-my-change`
+
       ## 1. Setup
+      - [ ] 1.0 Run pwd to confirm you are in ../OpenSpec-my-change; cd into it if not
       - [ ] 1.1 Create new module structure
       - [ ] 1.2 Add dependencies to package.json
 
-      ## 2. Core Implementatione
+      ## 2. Core Implementation
+      - [ ] 2.0 Run pwd to confirm you are in ../OpenSpec-my-change; cd into it if not
       - [ ] 2.1 Implement data export function
       - [ ] 2.2 Add CSV formatting utilities
 
@@ -183,5 +204,15 @@ apply:
     - tasks
   tracks: tasks.md
   instruction: |
-    Read context files, work through pending tasks, mark complete as you go.
+    Before starting any implementation:
+    1. Ensure a git worktree exists for this change. If not, create one:
+         git fetch origin
+         git worktree add ../OpenSpec-<change-name> -b feature/<change-name> origin/main
+    2. Switch into the worktree directory:
+         cd ../OpenSpec-<change-name>
+    3. All implementation work MUST happen inside the worktree, never in the main checkout.
+    4. Never delete the branch or worktree after implementation.
+
+    Then: read context files, work through pending tasks, mark complete as you go.
+    Pause after each task group and wait for user confirmation before proceeding to the next.
     Pause if you hit blockers or need clarification.

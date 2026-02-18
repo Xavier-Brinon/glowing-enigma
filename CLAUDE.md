@@ -72,7 +72,10 @@ Slash commands live in `.claude/commands/opsx/` and skills in `.claude/skills/`.
   git fetch origin
   git worktree add ../OpenSpec-<change-name> -b feature/<change-name> origin/main
   ```
-  All implementation work for that change happens inside the worktree directory (`../OpenSpec-<change-name>`), never in the main checkout.
+  All implementation work for that change happens inside the worktree directory (`../OpenSpec-<change-name>`), never in the main checkout. After creating the worktree, switch into it before doing any work:
+  ```bash
+  cd ../OpenSpec-<change-name>
+  ```
 - **Never delete branches**: branches are preserved as history; do not run `git branch -d` or `git branch -D`
 - **Never delete worktrees**: do not run `git worktree remove`; worktrees are kept alongside the main checkout
 - **Commit after each passing test**: smallest logical unit; message format: `phase-N: describe what changed and why`

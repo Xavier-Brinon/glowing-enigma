@@ -1,13 +1,16 @@
 ## 0. Git Setup
 
-- [ ] 0.1 Run `git fetch origin` to get the latest remote state
-- [ ] 0.2 Create worktree and branch from origin/main:
+- [x] 0.1 Run `git fetch origin` to get the latest remote state
+- [x] 0.2 Create worktree and branch from origin/main:
         `git worktree add ../OpenSpec-scaffold-and-pipes -b feature/scaffold-and-pipes origin/main`
-- [ ] 0.3 Confirm worktree is active and on the correct branch
+- [x] 0.3 Confirm worktree is active and on the correct branch
+- [ ] 0.4 Switch into the worktree directory for all subsequent work:
+        `cd ../OpenSpec-scaffold-and-pipes`
 
 ## 1. Project Scaffold
 
-- [ ] 1.1 Run `npx create-tsrouter-app@latest` (or TanStack Start CLI equivalent) to initialise the project inside the worktree
+- [ ] 1.0 Run pwd to confirm you are in ../OpenSpec-scaffold-and-pipes; cd into it if not
+- [ ] 1.1 Run `npx @tanstack/cli@latest create` to initialise the project inside the worktree
 - [ ] 1.2 Delete scaffold boilerplate routes and components not needed for this change
 - [ ] 1.3 Verify TypeScript strict mode is enabled in `tsconfig.json` (`"strict": true`)
 - [ ] 1.4 Create `.nvmrc` with `24.13`
@@ -16,6 +19,7 @@
 
 ## 2. Oxlint + Oxfmt
 
+- [ ] 2.0 Run pwd to confirm you are in ../OpenSpec-scaffold-and-pipes; cd into it if not
 - [ ] 2.1 Install `oxlint` and `oxfmt` as devDependencies
 - [ ] 2.2 Add `npm run lint` script: `oxlint .`
 - [ ] 2.3 Add `npm run format` script: `oxfmt --write .`
@@ -25,6 +29,7 @@
 
 ## 3. dotenvx
 
+- [ ] 3.0 Run pwd to confirm you are in ../OpenSpec-scaffold-and-pipes; cd into it if not
 - [ ] 3.1 Install `dotenvx` and prefix the `npm run dev` script with `dotenvx run --`
 - [ ] 3.2 Run `npx dotenvx set DATABASE_PATH ./data/books.db` to create the encrypted `.env`
 - [ ] 3.3 Confirm `.env` is committed-safe (encrypted value visible, plaintext not)
@@ -33,6 +38,7 @@
 
 ## 4. Database Connection
 
+- [ ] 4.0 Run pwd to confirm you are in ../OpenSpec-scaffold-and-pipes; cd into it if not
 - [ ] 4.1 Write failing test: `src/lib/db.ts` exports a `node:sqlite` `Database` instance
 - [ ] 4.2 Create `src/lib/db.ts` — open connection using `DATABASE_PATH`, throw if env var is missing
 - [ ] 4.3 Run `npm test` — db test passes
@@ -40,18 +46,21 @@
 
 ## 5. Vitest Smoke Test
 
+- [ ] 5.0 Run pwd to confirm you are in ../OpenSpec-scaffold-and-pipes; cd into it if not
 - [ ] 5.1 Confirm Vitest is installed and `npm test` is wired up
 - [ ] 5.2 Ensure at least one smoke test exists and passes (db test from 4.1 qualifies)
 - [ ] 5.3 Run `npm test` — exits 0
 
 ## 6. Default Page
 
+- [ ] 6.0 Run pwd to confirm you are in ../OpenSpec-scaffold-and-pipes; cd into it if not
 - [ ] 6.1 Wire `src/routes/__root.tsx` to render a minimal placeholder page (title + "Book Tracker" heading)
 - [ ] 6.2 Run `npm run dev` — server starts without console errors
 - [ ] 6.3 Open `http://localhost:3000` in the browser — page renders
 
 ## 7. Pre-Commit Verification
 
+- [ ] 7.0 Run pwd to confirm you are in ../OpenSpec-scaffold-and-pipes; cd into it if not
 - [ ] 7.1 Run `npm run typecheck` — zero TypeScript errors
 - [ ] 7.2 Run `npm run lint` — zero Oxlint errors
 - [ ] 7.3 Run `npm run format:check` — Oxfmt clean
