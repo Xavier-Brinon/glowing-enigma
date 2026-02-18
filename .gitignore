@@ -1,15 +1,15 @@
-# Claude Code
-.claude/
-
-# Node.js
-node_modules/
-dist/
-
-# SQLite
-*.db
-
-# dotenvx private keys (see ADR/0004)
-.env.keys
-
-# OS
+node_modules
 .DS_Store
+dist
+dist-ssr
+*.local
+# .env is intentionally committed (encrypted by dotenvx).
+# .env.keys contains the private decryption key — never commit it.
+.env.keys
+.nitro
+.tanstack
+.wrangler
+.output
+.vinxi
+__unconfig*
+todos.json
