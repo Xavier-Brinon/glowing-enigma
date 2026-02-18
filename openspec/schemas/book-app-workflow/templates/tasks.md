@@ -12,9 +12,11 @@
 - [ ] 1.0 Run pwd to confirm you are in ../OpenSpec-<change-name>; cd into it if not
 - [ ] 1.1 <!-- Task description -->
 - [ ] 1.2 <!-- Task description -->
+- [ ] 1.R Reviewer sign-off → Review-phase1-<!-- group-name -->.md
 
 ## 2. <!-- Task Group Name -->
 
 - [ ] 2.0 Run pwd to confirm you are in ../OpenSpec-<change-name>; cd into it if not
 - [ ] 2.1 <!-- Task description -->
 - [ ] 2.2 <!-- Task description -->
+- [ ] 2.R Reviewer sign-off → Review-phase2-<!-- group-name -->.md

@@ -241,6 +241,8 @@ The openspec created 7 tasks:
 I'll have to make sure that the TanStack CLI is being used correctly
 at step 1.
 ** opsx:apply -> 1 step at a time
+It tries to do all of them 😠.
+Update the schemas to re-inforce the stop gap.
 
 
 * Footnotes

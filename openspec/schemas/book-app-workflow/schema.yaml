@@ -169,9 +169,29 @@ artifacts:
         directory; cd into it if not` as the FIRST task in every group from
         ## 1. onwards. This guards against shell restarts that may leave the
         agent in the wrong directory.
+      - ALWAYS add `- [ ] X.R Reviewer sign-off` as the FINAL task in every
+        group from ## 1. onwards (where R is the next number after the last
+        task in that group). This triggers the review loop described below.
       - Each task MUST be a checkbox: `- [ ] X.Y Task description`
       - Tasks should be small enough to complete in one session
       - Order tasks by dependency (what must be done first?)
+
+      Review loop (mandatory at the end of every task group):
+      - After completing all other tasks in a group, launch a sub-agent using
+        the Reviewer persona defined in `personas/reviewer.md`.
+      - Instruct the sub-agent to review only the work done in that group
+        (not the entire change).
+      - The sub-agent writes its findings to a draft file named
+        `openspec/changes/<change-name>/Review-phase<N>-<group-name>.md`
+        (e.g. Review-phase1-project-scaffold.md). Use kebab-case for the
+        group name derived from the ## heading.
+      - If the reviewer raises [critical] or [important] issues:
+        1. Fix each issue.
+        2. Launch the Reviewer sub-agent again on the same group.
+        3. Repeat until the reviewer writes "## Approved" in the draft file.
+      - Only then mark `- [x] X.R Reviewer sign-off` and move to the next group.
+      - [nice-to-have] issues do not block sign-off but MUST be recorded in
+        the review draft.
 
       Example:
 
@@ -186,11 +206,13 @@ artifacts:
       - [ ] 1.0 Run pwd to confirm you are in ../OpenSpec-my-change; cd into it if not
       - [ ] 1.1 Create new module structure
       - [ ] 1.2 Add dependencies to package.json
+      - [ ] 1.R Reviewer sign-off → Review-phase1-setup.md
 
       ## 2. Core Implementation
       - [ ] 2.0 Run pwd to confirm you are in ../OpenSpec-my-change; cd into it if not
       - [ ] 2.1 Implement data export function
       - [ ] 2.2 Add CSV formatting utilities
+      - [ ] 2.R Reviewer sign-off → Review-phase2-core-implementation.md
 
       ```
 
