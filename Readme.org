@@ -1,4 +1,4 @@
-+title: Working with OpenSpec with multiple Claude profiles
+g+title: Working with OpenSpec with multiple Claude profiles
 #+author: HaQadosch
 #+date: [2026-02-15 Sun]
 #+startup: indent
@@ -243,7 +243,37 @@ at step 1.
 ** opsx:apply -> 1 step at a time
 It tries to do all of them 😠.
 Update the schemas to re-inforce the stop gap.
+** TODO create the github workflow
+to confirm all tests are passing and app is building:
+- Needs fast effeective validation
+- Type checking
+- Lint Style checks
+- Coding standards
+- Architectural sanity checks
+- Contract tests
 
+💡Check for behaviour not syntax.
+** TODO Ensure that the apply steps does
+- work in small steps
+  - Avoid large-batch changes (too big merge)
+  - Collect feedback faster
+  - Evaluate at every change
+- Optimise for fast feedback
+  - Faster than the rate of change (the faster you go the more checks you need)
+  - Feedback must be fast and accurate
+- Tests are the only source of truth
+  - Tests are definitive for release; not the manual check or LGTM
+- Avoid feature branches
+  - Don't hide changes, or don't keep them in a branch for too long
+  - Everyone should integrate continuously
+- Invest in deployment pipeline
+  - Make it fast, reliable, and repeatable (reproducible ?)
+  - All the way to production
+
+** Update the Design to avoid feature branch
+I should ensure this is trunk based and each steps in ~/opsx:apply~
+should be merged to main, not each feature. As for the CICD, this app
+is mainly for local users. Not meant to be on the web.
 
 * Footnotes
 

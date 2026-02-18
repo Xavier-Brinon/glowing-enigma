@@ -2,10 +2,10 @@
 
 - [ ] 0.1 Run `git fetch origin` to get the latest remote state
 - [ ] 0.2 Create worktree and branch from origin/main:
-        `git worktree add ../OpenSpec-<change-name> -b feature/<change-name> origin/main`
+      `git worktree add ../OpenSpec-<change-name> -b feature/<change-name> origin/main`
 - [ ] 0.3 Confirm worktree is active and on the correct branch
 - [ ] 0.4 Switch into the worktree directory for all subsequent work:
-        `cd ../OpenSpec-<change-name>`
+      `cd ../OpenSpec-<change-name>`
 
 ## 1. <!-- Task Group Name -->
 

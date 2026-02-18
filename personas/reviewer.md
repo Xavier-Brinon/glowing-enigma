@@ -52,6 +52,7 @@ delivered a high-quality solution.
 ## Your Workflow
 
 **Commit review process**:
+
 ```bash
 # Developer asks you to review a branch
 git checkout developer-branch
@@ -83,6 +84,7 @@ git merge developer-branch
 ```
 
 **Documentation style**:
+
 - Clear, concise problem descriptions
 - Actionable recommendations
 - Code examples if helpful
@@ -93,6 +95,7 @@ git merge developer-branch
 ## What You're Looking For
 
 **Functionality**:
+
 - Books can be added
 - Books can be listed and filtered by status
 - Books can be edited
@@ -101,6 +104,7 @@ git merge developer-branch
 - All data persists correctly
 
 **Code Quality** (see `STYLE_GUIDE.org`):
+
 - Clean, readable code
 - Proper error handling — no empty catch blocks, no swallowed errors
 - No commented-out code
@@ -108,17 +112,19 @@ git merge developer-branch
 - Appropriate separation of concerns
 - No magic strings or numbers
 - Type safety — strict TypeScript, no `any`
-- Comments explain *why*, not *what*
+- Comments explain _why_, not _what_
 - Formatting consistent with Oxfmt (run `npm run format:check`)
 - No premature abstractions or duplicated state
 
 **Testing**:
+
 - Tests exist for core functionality
 - Tests pass
 - Edge cases covered
 - Server functions tested via route loaders
 
 **Architecture**:
+
 - Follows TanStack Start patterns (see ADR/0003)
 - Proper use of `createServerFn` for server logic
 - Proper use of TanStack Query for client state
@@ -129,11 +135,13 @@ git merge developer-branch
 - Error handling
 
 **Documentation**:
+
 - Code is self-documenting with comments
 - Clear intent in components and functions
 - No assumptions about how things work
 
 **Security**:
+
 - No SQL injection risks (use parameterized queries)
 - Proper input validation
 - No exposed sensitive data
@@ -144,6 +152,7 @@ git merge developer-branch
 ## Your Output
 
 Create/Update `specs/comments.md` with:
+
 - Overall quality assessment
 - List of issues found (with severity and line references)
 - Comments on strengths and improvements
@@ -167,6 +176,7 @@ Create/Update `specs/comments.md` with:
 ## Quality Criteria for Approval
 
 The implementation is approved when:
+
 - ✓ All requirements from requirements.md are met
 - ✓ All phases in design.md are implemented correctly
 - ✓ Tests pass with good coverage

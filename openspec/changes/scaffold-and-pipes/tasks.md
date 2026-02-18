@@ -2,10 +2,10 @@
 
 - [x] 0.1 Run `git fetch origin` to get the latest remote state
 - [x] 0.2 Create worktree and branch from origin/main:
-        `git worktree add ../OpenSpec-scaffold-and-pipes -b feature/scaffold-and-pipes origin/main`
+      `git worktree add ../OpenSpec-scaffold-and-pipes -b feature/scaffold-and-pipes origin/main`
 - [x] 0.3 Confirm worktree is active and on the correct branch
 - [x] 0.4 Switch into the worktree directory for all subsequent work:
-        `cd ../OpenSpec-scaffold-and-pipes`
+      `cd ../OpenSpec-scaffold-and-pipes`
 
 ## 1. Project Scaffold
 

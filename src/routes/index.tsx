@@ -1,6 +1,6 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute } from "@tanstack/react-router";
 
-export const Route = createFileRoute('/')({ component: HomePage })
+export const Route = createFileRoute("/")({ component: HomePage });
 
 // Placeholder home page. Replaced in the book-list change.
 function HomePage() {
@@ -9,5 +9,5 @@ function HomePage() {
       <h1>Book Tracker</h1>
       <p>Coming soon.</p>
     </main>
-  )
+  );
 }

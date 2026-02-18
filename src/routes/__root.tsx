@@ -1,20 +1,20 @@
-import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
-import type { ReactNode } from 'react'
+import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 
-import appCss from '../styles.css?url'
+import appCss from "../styles.css?url";
 
 // Root layout shared by all routes. Provides the HTML shell.
 export const Route = createRootRoute({
   head: () => ({
     meta: [
-      { charSet: 'utf-8' },
-      { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { title: 'Book Tracker' },
+      { charSet: "utf-8" },
+      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { title: "Book Tracker" },
     ],
-    links: [{ rel: 'stylesheet', href: appCss }],
+    links: [{ rel: "stylesheet", href: appCss }],
   }),
   shellComponent: RootDocument,
-})
+});
 
 function RootDocument({ children }: { children: ReactNode }) {
   return (
@@ -27,5 +27,5 @@ function RootDocument({ children }: { children: ReactNode }) {
         <Scripts />
       </body>
     </html>
-  )
+  );
 }

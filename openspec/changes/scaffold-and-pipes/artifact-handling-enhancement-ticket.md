@@ -89,6 +89,7 @@ command would assign the next number automatically and create
 `NNNN-<name>/`.
 
 Benefits:
+
 - Stable short references: "change 0003", "#0003".
 - `ls` sorts chronologically without relying on date prefixes.
 - Archive preserves the number, so `0003-status-machine` remains
@@ -130,6 +131,7 @@ $ openspec list
 ```
 
 Options:
+
 - `--active` — show only in-progress changes
 - `--archived` — show only archived changes
 - `--json` — machine-readable output for piping
@@ -146,13 +148,13 @@ wrapper around a markdown-to-HTML converter pointed at
 
 ## Prior Art
 
-| Tool | Approach | Relevance |
-|------|----------|-----------|
-| [MADR](https://github.com/adr/madr) | `NNNN-title.md` numbering | Direct inspiration for numbered changes |
-| [Log4brains](https://github.com/thomvaill/log4brains) | CLI + static site from MADR files | Model for `openspec browse` |
-| [adr-viewer](https://github.com/mrwilson/adr-viewer) | Single-command HTML generator | Simpler alternative for browse |
-| [adr-log](https://github.com/adr/adr-log) | Keeps `index.md` up to date | Model for `openspec list` |
-| [ADR Manager](https://adr.github.io/adr-manager/) | Web UI on GitHub | Web-based stretch goal |
+| Tool                                                  | Approach                          | Relevance                               |
+| ----------------------------------------------------- | --------------------------------- | --------------------------------------- |
+| [MADR](https://github.com/adr/madr)                   | `NNNN-title.md` numbering         | Direct inspiration for numbered changes |
+| [Log4brains](https://github.com/thomvaill/log4brains) | CLI + static site from MADR files | Model for `openspec browse`             |
+| [adr-viewer](https://github.com/mrwilson/adr-viewer)  | Single-command HTML generator     | Simpler alternative for browse          |
+| [adr-log](https://github.com/adr/adr-log)             | Keeps `index.md` up to date       | Model for `openspec list`               |
+| [ADR Manager](https://adr.github.io/adr-manager/)     | Web UI on GitHub                  | Web-based stretch goal                  |
 
 ---
 

@@ -14,6 +14,7 @@ configured and passing from the first commit.
 ## Goals / Non-Goals
 
 **Goals:**
+
 - Initialise TanStack Start with TypeScript strict mode, TanStack
   Router, and TanStack Query
 - Pin Node.js via `.nvmrc` (24.13 LTS, required for `node:sqlite`)
@@ -27,6 +28,7 @@ configured and passing from the first commit.
 - Verify `npm run dev` serves the page without console errors
 
 **Non-Goals:**
+
 - No database tables or schema — that belongs in the next change
 - No XState machines — no entity lifecycle to model yet
 - No `createServerFn` calls — nothing to serve

@@ -52,6 +52,7 @@ create small git commits for each feature.
 ## Your Workflow
 
 **Git workflow**:
+
 ```bash
 # Create branch for each minor change/phase
 git checkout -b phase-1-setup
@@ -66,6 +67,7 @@ git merge phase-1-setup
 ```
 
 **TDD pattern**:
+
 1. Write failing test
 2. Implement minimum code to pass
 3. Verify test passes
@@ -73,6 +75,7 @@ git merge phase-1-setup
 5. Commit
 
 **Files to create/modify**:
+
 - `src/lib/db.ts` — Database connection via node:sqlite, schema, queries
 - `src/machines/bookStatusMachine.ts` — XState machine for book lifecycle
 - `src/routes/*` — Route modules with colocated server functions
@@ -105,7 +108,7 @@ git merge phase-1-setup
 - **Follow the style guide** — See `STYLE_GUIDE.org` for full rules (adapted from TigerBeetle):
   - No `any` types, strict TypeScript
   - Never swallow errors, validate at boundaries
-  - Comments explain *why*, not *what*
+  - Comments explain _why_, not _what_
   - No premature abstractions, no duplicated state
 
 ## Quality Standards
@@ -122,17 +125,20 @@ git merge phase-1-setup
 ## The Tech Stack — TanStack Start
 
 **Framework**:
+
 - TanStack Start: Full-stack React framework (see ADR/0003)
 - TanStack Router: File-based routing (`src/routes/*.tsx`), built into Start
 - TanStack Query: Server state (`useQuery`, `useMutation`), built into Start
 
 **Server logic**:
+
 - `createServerFn`: Server functions for CRUD — no Express, no REST API
 - `inputValidator`: Input validation on server functions
 - node:sqlite: Node.js built-in SQLite module (experimental, requires Node 22.5+)
 - See ADR/0002 for database rationale, ADR/0003 for framework rationale
 
 **State management**:
+
 - XState: State machines for entity lifecycles (see ADR/0005)
 - `useMachine` / `useActor` from `@xstate/react` for component integration
 - Define machines in `src/machines/` — one file per machine
@@ -140,6 +146,7 @@ git merge phase-1-setup
 - Plain `useState` for trivial UI state only (modals, toggles, form focus)
 
 **Environment variables**:
+
 - dotenvx: Encrypted env var management (see ADR/0004)
 - Use `npx dotenvx set KEY value` to add/change env vars (never edit `.env` by hand)
 - `dev` script uses `dotenvx run --` prefix for transparent decryption

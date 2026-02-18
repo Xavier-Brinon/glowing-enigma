@@ -38,6 +38,7 @@ openspec/
 ```
 
 Key commands:
+
 - Initialize: `openspec init` (select `claude-code`)
 - Create a change: `openspec new change <name>`
 - Check status: `openspec status`
@@ -57,7 +58,7 @@ Slash commands live in `.claude/commands/opsx/` and skills in `.claude/skills/`.
   - Types: strict TypeScript, no `any`, explicit function signatures
   - Errors: never swallow silently, validate at boundaries
   - Names: meaningful, never abbreviated, units as suffix (`latencyMs`)
-  - Comments: explain *why*, not *what*; sentences with full stops
+  - Comments: explain _why_, not _what_; sentences with full stops
   - Formatting: delegated to Oxfmt (replaces Prettier; Prettier-compatible, 35x faster)
   - Linting: Oxlint (replaces ESLint; ESLint-compatible rules, 50-100x faster)
   - State: XState for entity lifecycles (book status), plain `useState` for trivial UI only

@@ -24,11 +24,13 @@ runnable scaffold, nothing else can be verified end-to-end.
 ## Capabilities
 
 ### New Capabilities
+
 - `project-scaffold`: TanStack Start app initialised with TypeScript,
   TanStack Router, TanStack Query, Vitest, Oxlint, Oxfmt, dotenvx, and
   node:sqlite — builds cleanly and serves a default page
 
 ### Modified Capabilities
+
 <!-- None — this is a greenfield change. No existing specs to delta. -->
 
 ## Impact

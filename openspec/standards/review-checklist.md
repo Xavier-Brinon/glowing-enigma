@@ -28,6 +28,7 @@ npm run dev
 ```
 
 Document findings in the change's `comments.md` with:
+
 - Overall assessment (one paragraph)
 - Issues list (severity: critical / important / nice-to-have)
 - Specific file:line references where applicable
@@ -38,6 +39,7 @@ Document findings in the change's `comments.md` with:
 The implementation is approved when **all** of the following are true:
 
 ### Functionality
+
 - [ ] Books can be added with title, author, how-heard, expectations
 - [ ] Books can be listed and filtered/grouped by status
 - [ ] Books can be edited
@@ -46,6 +48,7 @@ The implementation is approved when **all** of the following are true:
 - [ ] All data persists correctly across sessions
 
 ### Code Quality
+
 - [ ] No `any` types — strict TypeScript throughout
 - [ ] No empty `catch` blocks — errors are surfaced, not swallowed
 - [ ] No commented-out code
@@ -53,16 +56,18 @@ The implementation is approved when **all** of the following are true:
 - [ ] No premature abstractions — every abstraction used in 3+ places
 - [ ] No duplicated state — computed values are derived, not cached
 - [ ] Naming: meaningful, never abbreviated, units as suffix
-- [ ] Comments explain *why*, not *what*; full sentences with full stops
+- [ ] Comments explain _why_, not _what_; full sentences with full stops
 - [ ] Formatting is Prettier-clean
 
 ### Testing
+
 - [ ] Tests exist for core functionality (CRUD operations, status transitions)
 - [ ] All tests pass (`npm test`)
 - [ ] Edge cases covered (empty list, invalid input, missing fields)
 - [ ] Server functions tested via route loaders
 
 ### Architecture
+
 - [ ] `createServerFn` used for all server logic — no Express, no ad-hoc fetch
 - [ ] `inputValidator` present on every `createServerFn`
 - [ ] TanStack Query used for client-side data fetching
@@ -73,12 +78,14 @@ The implementation is approved when **all** of the following are true:
 - [ ] Parameterized queries only — no SQL injection risk
 
 ### Security
+
 - [ ] No plaintext secrets in code or config
 - [ ] `.env` encrypted via dotenvx; `.env.keys` gitignored
 - [ ] Input validated at all `createServerFn` boundaries
 
 ### Documentation
-- [ ] Key decisions have comments explaining *why*
+
+- [ ] Key decisions have comments explaining _why_
 - [ ] Component intent is clear without needing to trace the full call stack
 - [ ] `tasks.md` is fully checked off
 

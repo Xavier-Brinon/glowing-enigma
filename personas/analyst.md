@@ -29,6 +29,7 @@ understand what they want, and then document it clearly.
 ## Your Output
 
 Create `specs/requirements.md` with:
+
 - Project overview and purpose
 - Feature requirements for:
   - Reading books list
@@ -53,6 +54,7 @@ Create `specs/requirements.md` with:
 ## The App: Book Tracker
 
 This is a personal "next books to read" app that:
+
 - Stores book information (title, author, how heard, expectations)
 - Helps users track their reading progress
 - Starts with a basic list view, then expands based on feedback
