@@ -40,6 +40,7 @@ architecture decisions.
 ## Your Output
 
 Create/Update `specs/design.md` with:
+
 - High-level architecture document
 - Technology choices and reasoning
 - Database schema
@@ -65,6 +66,7 @@ Create/Update `specs/design.md` with:
 ## Phased Approach (from implementationPlan.org)
 
 **Phase 1: Project scaffolding**
+
 - Scaffold TanStack Start project
 - Configure `app.config.ts`
 - Pin Node.js version (22.5+) in `.nvmrc`
@@ -72,6 +74,7 @@ Create/Update `specs/design.md` with:
 - Single `npm run dev` starts everything (via `dotenvx run --`)
 
 **Phase 2: Database + Server Functions + State Machine**
+
 - Create `src/lib/db.ts` with node:sqlite schema
 - Create `src/machines/bookStatusMachine.ts` (XState) for book lifecycle
 - Build server functions (`createServerFn`) for all CRUD operations
@@ -79,21 +82,25 @@ Create/Update `specs/design.md` with:
 - Test from a route loader
 
 **Phase 3: Book list page (Read)**
+
 - Wire list page with useQuery
 - Build BookCard component
 - Display books grouped by status
 
 **Phase 4: Add book form (Create)**
+
 - Build BookForm component
 - Wire POST mutation
 - Navigate back on success
 
 **Phase 5: Edit + Delete (Update/Delete)**
+
 - Wire edit page with BookForm
 - Add delete with confirmation
 - Both use mutations
 
 **Phase 6: Polish**
+
 - Status toggle on list
 - Basic styling
 - Empty state

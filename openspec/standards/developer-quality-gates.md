@@ -43,44 +43,51 @@ npm test            # all tests pass
 ```
 
 Also verify manually:
+
 - The app starts with `npm run dev` without console errors
 - The changed user flow works end-to-end in the browser
 
 ## Implementation Rules
 
 ### TypeScript
+
 - Strict mode — no exceptions
 - No `any` types — use `unknown` + type guards when type is truly unknown
 - Explicit types on all function signatures (parameters and return type)
 - Let TypeScript infer local variables where inference is obvious
 
 ### Server Functions
+
 - All CRUD operations go through `createServerFn` — no Express, no raw fetch
 - Every `createServerFn` has an `inputValidator`
 - Server functions live in the route file that uses them
 - Database calls go through `src/lib/db.ts` only
 
 ### State Management
+
 - Book lifecycle transitions go through `send({ type: 'EVENT' })` on the XState machine
 - Never assign `book.status = '...'` directly anywhere
 - `useMachine` / `useActor` from `@xstate/react` for component integration
 - `useState` only for trivial UI state (modal open/closed, toggle, form focus)
 
 ### Error Handling
+
 - Never swallow errors — no empty `catch` blocks
 - Server functions return structured error responses
 - UI shows error states to the user
 - Database operations wrapped in try/catch with meaningful messages
 
 ### Environment Variables
+
 - Use `npx dotenvx set KEY value` — never edit `.env` by hand
 - `.env` is committed (encrypted); `.env.keys` is gitignored (never committed)
 - Access server-side vars via `process.env`; client-side via `import.meta.env.VITE_*`
 
 ### Code Style
+
 - No magic strings — define constants for all status values
 - No commented-out code
-- Comments explain *why*, not *what*; full sentences with full stops
+- Comments explain _why_, not _what_; full sentences with full stops
 - Prettier handles formatting — run it and commit; never fight it
 
 ## Phase Sequence
@@ -88,14 +95,14 @@ Also verify manually:
 Implement in this order. Each phase must be complete and tested before
 starting the next.
 
-| Phase | Scope | Branch |
-|-------|-------|--------|
-| 1 | Project scaffolding, dotenvx setup, `.nvmrc` | `feature/<change>-setup` |
-| 2 | `src/lib/db.ts` schema, `createServerFn` CRUD, XState machine | `feature/<change>-data` |
-| 3 | Book list page, `useQuery`, `BookCard` component | `feature/<change>-list` |
-| 4 | Add book form, `BookForm`, POST mutation | `feature/<change>-create` |
-| 5 | Edit page, delete with confirmation, mutations | `feature/<change>-edit-delete` |
-| 6 | Status toggle on list, basic styling, empty state | `feature/<change>-polish` |
+| Phase | Scope                                                         | Branch                         |
+| ----- | ------------------------------------------------------------- | ------------------------------ |
+| 1     | Project scaffolding, dotenvx setup, `.nvmrc`                  | `feature/<change>-setup`       |
+| 2     | `src/lib/db.ts` schema, `createServerFn` CRUD, XState machine | `feature/<change>-data`        |
+| 3     | Book list page, `useQuery`, `BookCard` component              | `feature/<change>-list`        |
+| 4     | Add book form, `BookForm`, POST mutation                      | `feature/<change>-create`      |
+| 5     | Edit page, delete with confirmation, mutations                | `feature/<change>-edit-delete` |
+| 6     | Status toggle on list, basic styling, empty state             | `feature/<change>-polish`      |
 
 ## Quality Checklist Before Requesting Review
 
