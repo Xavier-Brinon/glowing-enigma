@@ -186,8 +186,16 @@ For the specs, it creates a new type of artifacts, in [[file:openspec/changes/sc
   Want to continue with tasks?
 #+end_src
 
+Seems a bit shipish and vague. We'll see 🤷🏻.
+** opsx:continue -> task
+Before starting, I want to make it very cleare to *Claude* and *OPSX*
+that any new task must be done from a fresh new branch from origin
+main and pulled into a new git worktree.
 
-
+There is also a new TanStack CLI that I want to see being used. I'd
+like to have the linter, formatter from [[https://oxc.rs/][OXC]] to replace the classic
+eslint and prettier.
+So I'm asking *Claude* to update the docs accordingly and create an [[file:ADR/0006-oxc-for-linting-and-formatting.org][ADR]].
 
 * Footnotes
 

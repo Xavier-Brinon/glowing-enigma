@@ -18,7 +18,8 @@ context: |
   - State:       XState for entity lifecycles; plain useState for trivial UI only
   - Env vars:    dotenvx (encrypted .env committed to git; .env.keys gitignored)
   - Language:    TypeScript strict mode throughout — no `any` types
-  - Formatting:  Prettier (run and commit; never fight it)
+  - Linting:     Oxlint (oxc-project/oxc; replaces ESLint — 50-100x faster, ESLint-compatible rules)
+  - Formatting:  Oxfmt (oxc-project/oxc; replaces Prettier — Prettier-compatible, 35x faster)
   - Testing:     Vitest for unit tests; server functions tested via route loaders
 
   ## Architecture Constraints
@@ -108,7 +109,12 @@ context: |
   Never implement a feature before writing its test.
 
   ### Git Workflow
-  - One branch per change: git checkout -b feature/<change-name>
+  - One branch per change: fetch origin, then create a branch and worktree from origin/main:
+      git fetch origin
+      git worktree add ../OpenSpec-<change-name> -b feature/<change-name> origin/main
+  - All implementation work happens inside the worktree directory, never in the main checkout
+  - Never delete branches (git branch -d/-D is forbidden)
+  - Never delete worktrees (git worktree remove is forbidden)
   - Commit after each passing test — smallest logical unit
   - Commit message format: phase-N: describe what changed and why
   - Do not push to remote until the Reviewer approves
@@ -116,7 +122,7 @@ context: |
 
   ### Pre-Commit Gates — all must pass before every commit
   - npm run typecheck — zero TypeScript errors
-  - npm run lint — zero linting errors
+  - npm run lint — zero Oxlint errors
   - npm test — all tests pass
   - App starts with npm run dev without console errors
   - Changed user flow works end-to-end in the browser
@@ -127,7 +133,7 @@ context: |
   State: status transitions via send({ type: 'EVENT' }) on XState machine only — never book.status = '...' directly
   Errors: no empty catch blocks, server functions return structured errors, UI shows error states
   Env vars: npx dotenvx set KEY value only — never edit .env by hand; .env committed (encrypted), .env.keys gitignored
-  Code style: no magic strings (use constants for status values), no commented-out code, Prettier-clean
+  Code style: no magic strings (use constants for status values), no commented-out code, Oxfmt-clean
 
   ### Phase Sequence
   Phase 1: Project scaffolding, dotenvx setup, .nvmrc
@@ -178,7 +184,7 @@ context: |
   - No duplicated state — computed values derived, never cached in a second variable
   - Naming: meaningful, never abbreviated, units as suffix
   - Comments explain why, not what; full sentences with full stops
-  - Formatting is Prettier-clean
+  - Formatting is Oxfmt-clean
 
   Testing:
   - Tests exist for core functionality (CRUD, status transitions)

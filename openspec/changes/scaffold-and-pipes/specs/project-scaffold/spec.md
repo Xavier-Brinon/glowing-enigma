@@ -80,12 +80,24 @@ infrastructure is correctly wired.
 - **WHEN** the developer runs `npm test` on a clean install
 - **THEN** the command exits with code 0 and reports at least one passing test
 
-### Requirement: Prettier is configured and code is formatted
+### Requirement: Oxlint is configured and code is lint-clean
 
-The project SHALL include Prettier. All committed source files MUST be
-Prettier-clean. Running `npm run format:check` SHALL exit with code 0.
+The project SHALL include Oxlint as the linter (replacing ESLint). Running
+`npm run lint` SHALL exit with code 0 with zero linting errors on all source
+files.
+
+#### Scenario: Lint check passes on committed files
+
+- **WHEN** the developer runs `npm run lint`
+- **THEN** the command exits with code 0, indicating no Oxlint violations
+
+### Requirement: Oxfmt is configured and code is formatted
+
+The project SHALL include Oxfmt as the formatter (replacing Prettier). All
+committed source files MUST be Oxfmt-clean. Running `npm run format:check`
+SHALL exit with code 0.
 
 #### Scenario: Format check passes on committed files
 
 - **WHEN** the developer runs `npm run format:check`
-- **THEN** the command exits with code 0, indicating no formatting violations
+- **THEN** the command exits with code 0, indicating no Oxfmt formatting violations

@@ -1,0 +1,184 @@
+#+title: Use Oxc (Oxlint + Oxfmt) for Linting and Formatting
+#+author: HaQadosch
+#+date: [2026-02-18 Tue]
+#+startup: indent
+* Status
+
+Accepted
+
+* Context and Problem Statement
+
+Every JavaScript/TypeScript project needs a linter and a formatter to
+enforce code quality and consistent style. The two dominant tools have
+historically been [[https://eslint.org/][ESLint]] (linter) and [[https://prettier.io/][Prettier]] (formatter).
+
+Both tools are mature and widely adopted, but they carry a significant
+cost at scale: ESLint is slow (JavaScript-based, single-threaded rule
+execution), Prettier is slower still, and running both on every save
+or pre-commit hook adds perceptible latency to the development loop.
+
+The [[https://oxc.rs/][Oxc project]] (JavaScript Oxidation Compiler) ships two drop-in
+replacements written in Rust:
+
+- oxlint :: an ESLint-compatible linter, 50–100× faster than ESLint
+- oxfmt :: a Prettier-compatible formatter, 35× faster than Prettier
+
+Both are maintained by [[https://voidzero.dev/][VoidZero]] (the organisation behind Vite, Vitest,
+and Rolldown) and are designed as direct replacements that respect
+existing ESLint rules and Prettier formatting conventions.
+
+* Options Considered
+
+** ESLint + Prettier (status quo)
+
+Pros:
+- Industry standard; universally understood
+- Largest rule ecosystem (thousands of ESLint plugins)
+- Prettier is the de facto formatting standard for JavaScript/TypeScript
+- Extensive IDE integration
+
+Cons:
+- ESLint is slow — pure JavaScript, single-threaded; noticeable lag on
+  save and in CI even for medium-sized projects
+- Prettier is the slowest formatter in the JavaScript ecosystem
+- Two separate tools with separate config files (=.eslintrc=,
+  =.prettierrc=) that must be kept coherent
+- ESLint + Prettier together require a compatibility shim
+  (=eslint-config-prettier=) to avoid rule conflicts
+
+** Biome
+
+Pros:
+- Single tool for both linting and formatting
+- Significantly faster than ESLint + Prettier
+
+Cons:
+- Not fully ESLint-compatible — some rule coverage gaps
+- Formatter is 3× slower than Oxfmt
+- Smaller community and ecosystem than ESLint
+
+** Oxlint + Oxfmt (Oxc project)
+
+Pros:
+- 50–100× faster than ESLint (Rust-based, parallel execution)
+- 35× faster than Prettier (Rust-based)
+- ESLint-compatible rules — same rule names and semantics as ESLint
+- Prettier-compatible output — same formatting decisions as Prettier;
+  no diff on already-Prettier-formatted code
+- 650+ rules and growing; type-aware linting alpha available
+- Maintained by VoidZero, the same organisation behind Vite and Vitest
+  (consistent with the project's TanStack Start / Vitest stack)
+- Both tools work independently — can adopt one without the other
+- No config shim needed between linter and formatter
+
+Cons:
+- Oxfmt is still in alpha — production use is early
+- Smaller plugin ecosystem than ESLint (no third-party plugins yet)
+- Less IDE tooling maturity compared to ESLint + Prettier
+- Breaking changes possible before stable release
+
+* Decision
+
+Adopt [[https://oxc.rs/docs/guide/usage/linter][Oxlint]] as the linter and [[https://oxc.rs/docs/guide/usage/formatter][Oxfmt]] as the formatter, replacing
+ESLint and Prettier respectively.
+
+** Speed Matches the Style Guide's Priorities
+
+The style guide (adapted from Tiger Style) prioritises developer
+experience as a first-class concern. Linting and formatting run on
+every save, every commit, and in CI. A 50–100× speedup for the linter
+and 35× for the formatter directly reduces friction in the development
+loop — this is not a micro-optimisation.
+
+** Drop-in Compatibility Reduces Migration Cost
+
+Oxlint uses the same rule names and semantics as ESLint. Oxfmt
+produces the same output as Prettier on well-formatted code. Switching
+requires no reformatting commits and no rule re-learning — it is a
+tooling swap, not a style change.
+
+** Ecosystem Alignment
+
+Vite, Vitest, Rolldown, and Oxc are all VoidZero projects. The project
+already uses Vitest and TanStack Start (built on Vite). Adopting Oxc
+keeps the toolchain within a single, coherent ecosystem with shared
+priorities (speed, correctness, TypeScript-first).
+
+** Greenfield Project — Zero Migration Cost
+
+This project has no existing codebase. There is no =.eslintrc= to
+migrate, no Prettier config to preserve, and no formatted source files
+to recheck. The scaffold starts with Oxlint and Oxfmt from day one,
+so the alpha-stage risk of Oxfmt is contained — any breaking changes
+before 1.0 affect only the formatter config, not reformatted history.
+
+** Scope
+
+- =oxlint= replaces ESLint for all linting. The =npm run lint= script
+  invokes =oxlint=.
+- =oxfmt= replaces Prettier for all formatting. The =npm run format=
+  and =npm run format:check= scripts invoke =oxfmt=.
+- No ESLint or Prettier packages are installed.
+
+* Consequences
+
+** Positive
+
+- Linting and formatting are effectively instantaneous on a
+  project of this size
+- Single-ecosystem toolchain (VoidZero: Vite, Vitest, Oxc)
+- Drop-in compatibility means no style drift from the Prettier
+  convention the team already knows
+- ESLint-compatible rules mean existing knowledge transfers directly
+
+** Negative
+
+- Oxfmt is alpha — config API may change before 1.0
+- No third-party ESLint plugin support (e.g. =eslint-plugin-react-hooks=
+  must be substituted with built-in Oxlint equivalents where available)
+- Less IDE tooling maturity; some editors may need manual config for
+  Oxfmt format-on-save
+
+** Mitigation
+
+- Pin Oxlint and Oxfmt versions in =package.json= to avoid unexpected
+  breaking changes from alpha releases
+- Review Oxlint's built-in React rules coverage before relying on it
+  to replace =eslint-plugin-react-hooks= entirely; add a note in
+  =tasks.md= if any gaps are found
+- If Oxfmt breaks or proves too unstable before 1.0, Prettier can be
+  restored in under 10 minutes — the formatting output is compatible,
+  so no reformatting commit is needed
+
+* Impact on Architecture
+
+Replaces two =devDependencies= with two others:
+
+| Removed                  | Added    |
+|--------------------------+----------|
+| =eslint=                 | =oxlint= |
+| =prettier=               | =oxfmt=  |
+| =eslint-config-prettier= | —        |
+
+=package.json= scripts:
+
+#+begin_src json
+  {
+    "scripts": {
+      "lint":          "oxlint .",
+      "format":        "oxfmt --write .",
+      "format:check":  "oxfmt --check ."
+    }
+  }
+#+end_src
+
+No source files, style rules, or formatting output change as a result
+of this decision.
+
+* References
+
+- [[https://oxc.rs/][Oxc project homepage]]
+- [[https://oxc.rs/docs/guide/usage/linter][Oxlint usage guide]]
+- [[https://oxc.rs/docs/guide/usage/formatter][Oxfmt usage guide]]
+- [[https://voidzero.dev/][VoidZero — the organisation behind Oxc, Vite, and Vitest]]
+- [[file:0003-switch-to-tanstack-start.org][ADR 0003]] — TanStack Start (built on Vite, same ecosystem)

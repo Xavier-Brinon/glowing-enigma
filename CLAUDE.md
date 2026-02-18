@@ -58,7 +58,8 @@ Slash commands live in `.claude/commands/opsx/` and skills in `.claude/skills/`.
   - Errors: never swallow silently, validate at boundaries
   - Names: meaningful, never abbreviated, units as suffix (`latencyMs`)
   - Comments: explain *why*, not *what*; sentences with full stops
-  - Formatting: delegated to Prettier
+  - Formatting: delegated to Oxfmt (replaces Prettier; Prettier-compatible, 35x faster)
+  - Linting: Oxlint (replaces ESLint; ESLint-compatible rules, 50-100x faster)
   - State: XState for entity lifecycles (book status), plain `useState` for trivial UI only
   - Simplicity: no premature abstractions, no duplicated state, zero technical debt
 
@@ -66,11 +67,12 @@ Slash commands live in `.claude/commands/opsx/` and skills in `.claude/skills/`.
 
 - **Never push to remote**: do not run `git push` unless the user explicitly requests it
 - **Draft PRs as local files**: when a PR description is needed, write it to a markdown file (e.g., `openspec/changes/<name>/pr.md`) instead of opening a GitHub PR
-- **One branch per change**: for every new feature or change, create a dedicated branch and a git worktree:
+- **One branch per change**: for every new feature or change, fetch the latest remote state, then create a dedicated branch from `origin/main` and a git worktree together:
   ```bash
-  git worktree add ../OpenSpec-<change-name> -b feature/<change-name>
+  git fetch origin
+  git worktree add ../OpenSpec-<change-name> -b feature/<change-name> origin/main
   ```
-  All implementation work for that change happens inside its worktree directory.
+  All implementation work for that change happens inside the worktree directory (`../OpenSpec-<change-name>`), never in the main checkout.
 - **Never delete branches**: branches are preserved as history; do not run `git branch -d` or `git branch -D`
 - **Never delete worktrees**: do not run `git worktree remove`; worktrees are kept alongside the main checkout
 - **Commit after each passing test**: smallest logical unit; message format: `phase-N: describe what changed and why`

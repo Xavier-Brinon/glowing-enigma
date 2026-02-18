@@ -14,7 +14,8 @@ runnable scaffold, nothing else can be verified end-to-end.
 - Initialise `node:sqlite` database connection in `src/lib/db.ts`
   (schema-less at this stage — just the connection)
 - Add Vitest for unit testing
-- Add Prettier for formatting
+- Add Oxlint for linting (replaces ESLint)
+- Add Oxfmt for formatting (replaces Prettier)
 - Wire a single root route (`src/routes/__root.tsx`) that renders a
   default placeholder page
 - Confirm the app starts with `npm run dev` and displays that page in
@@ -24,7 +25,7 @@ runnable scaffold, nothing else can be verified end-to-end.
 
 ### New Capabilities
 - `project-scaffold`: TanStack Start app initialised with TypeScript,
-  TanStack Router, TanStack Query, Vitest, Prettier, dotenvx, and
+  TanStack Router, TanStack Query, Vitest, Oxlint, Oxfmt, dotenvx, and
   node:sqlite — builds cleanly and serves a default page
 
 ### Modified Capabilities

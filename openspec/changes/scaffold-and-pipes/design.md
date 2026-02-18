@@ -8,7 +8,7 @@ revisit them — it specifies how to wire them together into a working,
 runnable baseline.
 
 The target is a single `npm run dev` that starts the app and serves a
-default page, with all tooling (TypeScript, Prettier, Vitest, dotenvx)
+default page, with all tooling (TypeScript, Oxlint, Oxfmt, Vitest, dotenvx)
 configured and passing from the first commit.
 
 ## Goals / Non-Goals
@@ -21,7 +21,8 @@ configured and passing from the first commit.
   gitignored, `DATABASE_PATH` set
 - Create `src/lib/db.ts` with an open `node:sqlite` connection (no
   schema yet)
-- Add Vitest and Prettier; both passing on first run
+- Add Oxlint and Oxfmt; both passing on first run
+- Add Vitest; passing on first run
 - Wire `src/routes/__root.tsx` to render a minimal placeholder page
 - Verify `npm run dev` serves the page without console errors
 

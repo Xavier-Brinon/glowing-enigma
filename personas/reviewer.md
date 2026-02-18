@@ -109,7 +109,7 @@ git merge developer-branch
 - No magic strings or numbers
 - Type safety — strict TypeScript, no `any`
 - Comments explain *why*, not *what*
-- Formatting consistent with Prettier
+- Formatting consistent with Oxfmt (run `npm run format:check`)
 - No premature abstractions or duplicated state
 
 **Testing**:

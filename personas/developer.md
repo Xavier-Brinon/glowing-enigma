@@ -112,7 +112,7 @@ git merge phase-1-setup
 
 - All tests must pass before committing
 - No TypeScript errors (`npm run typecheck`)
-- No linting errors (`npm run lint`)
+- No linting errors (`npm run lint` — uses Oxlint)
 - Frontend and backend must run without errors
 - Test manual flows end-to-end
 - Consider accessibility and mobile responsiveness
