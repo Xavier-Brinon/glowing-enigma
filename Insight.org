@@ -61,3 +61,11 @@ across multiple dotfiles. The glob patterns follow the same syntax as
 =.gitignore=. Auto-generated files like =src/routeTree.gen.ts= should
 always be excluded — they will keep drifting as the formatter and
 generator disagree on style.
+
+** Worktree discipline
+
+When using git worktrees, every file change must happen in the active
+worktree directory, not the main checkout. They share the same =.git=
+database but have separate working trees. Editing files in the main
+checkout won't show up in =git status= of the worktree branch — they
+are invisible to the PR.

@@ -32,13 +32,13 @@
 
 ## 3. dotenvx
 
-- [ ] 3.0 Run pwd to confirm you are in ../OpenSpec-scaffold-and-pipes; cd into it if not
-- [ ] 3.1 Install `dotenvx` and prefix the `npm run dev` script with `dotenvx run --`
-- [ ] 3.2 Run `npx dotenvx set DATABASE_PATH ./data/books.db` to create the encrypted `.env`
-- [ ] 3.3 Confirm `.env` is committed-safe (encrypted value visible, plaintext not)
-- [ ] 3.4 Add `.env.keys` to `.gitignore` and confirm it does not appear in `git status`
-- [ ] 3.5 Back up `.env.keys` outside the repository
-- [ ] 3.R Reviewer sign-off → Review-phase3-dotenvx.md
+- [x] 3.0 Run pwd to confirm you are in ../OpenSpec-scaffold-and-pipes; cd into it if not
+- [x] 3.1 Install `dotenvx` and prefix the `npm run dev` script with `dotenvx run --`
+- [x] 3.2 Run `npx dotenvx set DATABASE_PATH ./data/books.db` to create the encrypted `.env`
+- [x] 3.3 Confirm `.env` is committed-safe (encrypted value visible, plaintext not)
+- [x] 3.4 Add `.env.keys` to `.gitignore` and confirm it does not appear in `git status`
+- [x] 3.5 Back up `.env.keys` outside the repository
+- [x] 3.R Reviewer sign-off → Review-phase3-dotenvx.org
 
 ## 4. Database Connection
 
