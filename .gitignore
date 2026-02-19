@@ -3,9 +3,11 @@ node_modules
 dist
 dist-ssr
 *.local
+
 # .env is intentionally committed (encrypted by dotenvx).
 # .env.keys contains the private decryption key — never commit it.
 .env.keys
+
 .nitro
 .tanstack
 .wrangler

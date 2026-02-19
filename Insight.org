@@ -1,0 +1,63 @@
+#+title: Insight Journal
+
+This file is *append-only*. Each entry captures an educational insight
+discovered during implementation. Entries are timestamped with the date
+and the current OpenSpec change phase. Do not edit or remove previous
+entries — they form a chronological record of what was learned and why.
+
+-----
+
+* 2026-02-19 — scaffold-and-pipes / Phase 3 (dotenvx)
+
+** Trunk-Based Development with git worktrees
+
+Each phase gets its own short-lived branch from =origin/main=.
+Worktrees let you have multiple branches checked out simultaneously —
+the main checkout stays untouched while work happens in separate
+directories. This prevents accidentally mixing changes across phases.
+
+** dotenvx =run --= prefix
+
+Unlike =dotenv= which loads =.env= at process startup, =dotenvx run
+--= decrypts the =.env= file at runtime and injects the plaintext
+values into the child process's environment. The =--= separates
+dotenvx flags from the actual command. This means =.env= can be safely
+committed (it's encrypted), while =.env.keys= (the decryption key)
+stays local and gitignored.
+
+** dotenvx vs traditional .env
+
+Traditional =.env= files contain plaintext secrets and must be
+gitignored, meaning each developer needs a separate copy. dotenvx
+encrypts the values in-place so the =.env= file itself is safe to
+commit — the whole team shares the same encrypted config. Only
+=.env.keys= (the decryption key) must stay secret and local. This is a
+significant improvement for secret management in small teams.
+
+** dotenvx logging levels
+
+=--verbose= gives you a quick confirmation of what was injected
+(="HELLO set"=). =--debug= goes deeper — shows config options, file
+reading/parsing, and the actual decrypted values being assigned. You
+can also use =--log-level=error= to suppress everything except errors,
+which is handy for CI. All flags must go *before* the =--= separator
+since they're dotenvx options, not arguments to the child command.
+
+** Reviewer reports as decision history
+
+Each =.R= task produces a concrete review file — not just a checkbox.
+These reports record what was verified, what scenarios passed, any
+observations, and explicit approval. When the change is archived,
+these reports move with it, preserving the reasoning behind "why was
+this accepted?" for future reference.
+
+** Oxfmt =ignorePatterns= in =.oxfmtrc.json=
+
+Oxfmt is Prettier-compatible, so it reads =.prettierignore= by
+default. But the idiomatic Oxc way is to use =ignorePatterns= in
+=.oxfmtrc.json= (generated via =oxfmt --init=). This keeps ignore
+config co-located with the formatter config rather than scattered
+across multiple dotfiles. The glob patterns follow the same syntax as
+=.gitignore=. Auto-generated files like =src/routeTree.gen.ts= should
+always be excluded — they will keep drifting as the formatter and
+generator disagree on style.
