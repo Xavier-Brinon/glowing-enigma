@@ -1,0 +1,64 @@
+#+title: Review: Phase 3 — dotenvx
+
+*Branch:* =scaffold-and-pipes/phase-3-dotenvx=
+*Reviewer date:* 2026-02-19
+*Commit reviewed:* (not yet committed — staged and ready)
+
+-----
+
+* Overall Assessment
+
+Phase 3 delivers encrypted environment variable management via
+dotenvx. The =@dotenvx/dotenvx= package is installed, the =npm run
+dev= script is prefixed with =dotenvx run --debug --= to decrypt and
+inject env vars at runtime, =DATABASE_PATH= is set to
+=./data/books.db= via =npx dotenvx set=, the =.env= file contains only
+the public key and encrypted ciphertext (no plaintext), =.env.keys= is
+gitignored and does not appear in =git status=, and a backup of
+=.env.keys= was placed at =~/.book-tracker-env-keys=.
+
+-----
+
+* Spec Scenario Verification
+
+| Scenario                         | Verification                                                       | Result |
+|----------------------------------+--------------------------------------------------------------------+--------|
+| DATABASE_PATH is set via dotenvx | =npx dotenvx get DATABASE_PATH= returns =./data/books.db=          | Pass   |
+| .env is committed-safe           | =.env= contains =encrypted:BE...= ciphertext, no plaintext visible | Pass   |
+| .env.keys is not tracked by git  | =git status -- .env.keys= shows nothing; =.gitignore= includes it  | Pass   |
+| npm run dev reads DATABASE_PATH  | =dev= script is =dotenvx run --debug -- vite dev --port 3000=      | Pass   |
+
+-----
+
+* Issues
+
+| Issue                                       | Severity    | Status                                                          |
+|---------------------------------------------+-------------+-----------------------------------------------------------------|
+| =--debug= flag added to dev script          | observation | Accepted — useful during development; can be removed later      |
+| =src/routeTree.gen.ts= reformatted by Oxfmt | minor       | Resolved — added to =.oxfmtrc.json= ignorePatterns              |
+
+-----
+
+* Observations (non-blocking)
+
+- The =--debug= flag on dotenvx will output decrypted values to the
+  console during =npm run dev=. This is fine for local development but
+  should be reviewed before any CI or production use. Consider
+  downgrading to =--verbose= or removing entirely once the setup is
+  validated.
+- =.env.keys= backup at =~/.book-tracker-env-keys= is a local-only
+  safeguard. For team use, a secure vault or password manager entry
+  would be more appropriate.
+
+-----
+
+* Approved
+
+All Phase 3 spec requirements are met:
+
+- dotenvx installed as devDependency (=@dotenvx/dotenvx@^1.52.0=).
+- =npm run dev= prefixed with =dotenvx run --debug --= (=package.json:9=).
+- =DATABASE_PATH= encrypted in =.env= (=.env:9=).
+- =.env.keys= gitignored (=.gitignore:8=) and backed up externally.
+
+Proceed to Phase 4 (Database Connection).
