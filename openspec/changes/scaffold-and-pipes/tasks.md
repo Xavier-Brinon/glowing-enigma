@@ -42,12 +42,12 @@
 
 ## 4. Database Connection
 
-- [ ] 4.0 Run pwd to confirm you are in ../OpenSpec-scaffold-and-pipes; cd into it if not
-- [ ] 4.1 Write failing test: `src/lib/db.ts` exports a `node:sqlite` `Database` instance
-- [ ] 4.2 Create `src/lib/db.ts` — open connection using `DATABASE_PATH`, throw if env var is missing
-- [ ] 4.3 Run `npm test` — db test passes
-- [ ] 4.4 Commit: `phase-1: add node:sqlite connection module with DATABASE_PATH guard`
-- [ ] 4.R Reviewer sign-off → Review-phase4-database-connection.md
+- [x] 4.0 Run pwd to confirm you are in ../OpenSpec-scaffold-and-pipes; cd into it if not
+- [x] 4.1 Write failing test: `src/lib/db.ts` exports a `node:sqlite` `Database` instance
+- [x] 4.2 Create `src/lib/db.ts` — open connection using `DATABASE_PATH`, throw if env var is missing
+- [x] 4.3 Run `npm test` — db test passes
+- [x] 4.4 Commit: `phase-1: add node:sqlite connection module with DATABASE_PATH guard`
+- [x] 4.R Reviewer sign-off → Review-phase4-database-connection.md
 
 ## 5. Vitest Smoke Test
 
