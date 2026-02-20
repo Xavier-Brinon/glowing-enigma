@@ -1,8 +1,6 @@
-import sqlite from 'node:sqlite'
+import { DatabaseSync } from 'node:sqlite'
 
-const { DatabaseSync } = sqlite
-
-export default function createDatabaseConnection() {
+export function createDatabaseConnection(): DatabaseSync {
   const databasePath = process.env.DATABASE_PATH
 
   if (!databasePath) {

@@ -69,3 +69,113 @@ worktree directory, not the main checkout. They share the same =.git=
 database but have separate working trees. Editing files in the main
 checkout won't show up in =git status= of the worktree branch — they
 are invisible to the PR.
+
+-----
+
+* 2026-02-20 — scaffold-and-pipes / Phase 4 (database connection)
+
+** =process.env= assignment silently coerces =undefined= to the string ="undefined"=
+
+When manually saving and restoring environment variables in tests, a
+subtle bug appears:
+
+#+begin_src typescript
+const originalPath = process.env.DATABASE_PATH  // undefined (JavaScript value)
+delete process.env.DATABASE_PATH                // env var removed
+// ... test runs ...
+process.env.DATABASE_PATH = originalPath        // BUG: sets it to the string "undefined"
+#+end_src
+
+=process.env= is a plain JavaScript object whose values are *always
+strings*. Assigning =undefined= to a property of =process.env= does
+not delete the key — Node.js coerces the value to the string
+="undefined"=. So after the restore, =DATABASE_PATH= is set to the
+literal text ="undefined"=, which is truthy and will silently pass any
+=if (!databasePath)= guard in your code.
+
+This causes cross-test pollution: later tests that expect
+=DATABASE_PATH= to be unset will instead find it set to ="undefined"=
+and behave incorrectly.
+
+** Use Vitest's =vi.stubEnv= instead of manual =process.env= manipulation
+
+Vitest provides =vi.stubEnv= precisely to avoid this class of bug:
+
+#+begin_src typescript
+import { afterEach, vi } from 'vitest'
+
+describe('database connection', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()   // always restores original env state after each test
+  })
+
+  it('throws if DATABASE_PATH is not set', () => {
+    vi.stubEnv('DATABASE_PATH', undefined)  // properly removes the key
+
+    expect(() => db()).toThrow('DATABASE_PATH environment variable is required')
+  })
+
+  it('creates a connection with DATABASE_PATH', () => {
+    vi.stubEnv('DATABASE_PATH', './test.db')  // sets a clean value
+
+    const connection = db()
+    expect(connection.constructor.name).toBe('DatabaseSync')
+  })
+})
+#+end_src
+
+Key benefits:
+- =vi.stubEnv('KEY', undefined)= *actually removes* the key from
+  =process.env=, unlike direct assignment.
+- =vi.unstubAllEnvs()= in =afterEach= guarantees cleanup even if a
+  test throws — no need for =try/finally= or manual =originalPath=
+  bookkeeping.
+- Tests are shorter, cleaner, and resilient to future additions.
+
+** Rule of thumb
+
+Never write =process.env.SOME_VAR = someValue= in tests. Always use
+=vi.stubEnv= (Vitest), =jest.replaceProperty= (Jest), or equivalent
+framework utilities that understand the string-coercion behaviour of
+=process.env= and handle cleanup automatically.
+
+** Use =:memory:= for SQLite in tests, never a file path
+
+When testing database connection modules, avoid pointing =DATABASE_PATH=
+at a real file like =./test.db=:
+
+#+begin_src typescript
+// BAD — writes a file to disk on every test run
+vi.stubEnv('DATABASE_PATH', './test.db')
+#+end_src
+
+Problems with file-backed databases in tests:
+- Leaves artefacts on disk (=test.db= persists between runs)
+- Tests are no longer isolated — data written in one test can bleed
+  into the next if the file is not explicitly cleaned up
+- The file may appear in =git status= and accidentally get staged
+- CI environments may not have write permission to the expected path
+
+SQLite supports a special =:memory:= path that creates a database
+entirely in RAM:
+
+#+begin_src typescript
+// GOOD — ephemeral, no disk I/O, automatically destroyed at end of test
+vi.stubEnv('DATABASE_PATH', ':memory:')
+#+end_src
+
+Benefits of =:memory:=:
+- *Isolated by default*: each new =DatabaseSync(':memory:')= call gets
+  a fresh, empty database — no cleanup needed between tests.
+- *Fast*: no disk I/O, all reads and writes happen in RAM.
+- *No artefacts*: nothing is left on disk after the test process exits.
+- *Works everywhere*: no file-system permissions required, works
+  identically in CI and local environments.
+
+** Rule of thumb for SQLite tests
+
+Always use =:memory:= as the database path in tests unless you are
+explicitly testing persistence across process restarts. If you ever
+find a =*.db= file appearing in =git status= during a test run, that
+is a signal that a test is using a file-backed database and should be
+switched to =:memory:=.

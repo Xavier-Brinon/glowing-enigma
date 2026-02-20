@@ -1,29 +1,22 @@
-import db from './db'
+import { afterEach, vi } from 'vitest'
+import { createDatabaseConnection } from './db'
 
 describe('database connection', () => {
-  it('throws if DATABASE_PATH is not set', () => {
-    const originalPath = process.env.DATABASE_PATH
-    delete process.env.DATABASE_PATH
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
 
-    try {
-      expect(() => db()).toThrow(
-        'DATABASE_PATH environment variable is required'
-      )
-    } finally {
-      process.env.DATABASE_PATH = originalPath
-    }
+  it('throws if DATABASE_PATH is not set', () => {
+    vi.stubEnv('DATABASE_PATH', undefined)
+
+    expect(() => createDatabaseConnection()).toThrow('DATABASE_PATH environment variable is required')
   })
 
   it('creates DatabaseSync instance with DATABASE_PATH', () => {
-    const originalPath = process.env.DATABASE_PATH
-    process.env.DATABASE_PATH = './test.db'
+    vi.stubEnv('DATABASE_PATH', ':memory:')
 
-    try {
-      const connection = db()
-      expect(connection).toBeDefined()
-      expect(connection.constructor.name).toBe('DatabaseSync')
-    } finally {
-      process.env.DATABASE_PATH = originalPath
-    }
+    const connection = createDatabaseConnection()
+    expect(connection).toBeDefined()
+    expect(connection.constructor.name).toBe('DatabaseSync')
   })
 })
