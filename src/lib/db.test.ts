@@ -15,7 +15,10 @@ describe('database connection', () => {
   it('creates DatabaseSync instance with DATABASE_PATH', () => {
     vi.stubEnv('DATABASE_PATH', ':memory:')
 
-    const connection = createDatabaseConnection()
+    // `using` ensures the connection is closed automatically when this
+    // block exits, even if an assertion throws. DatabaseSync implements
+    // Symbol.dispose natively in Node 22+.
+    using connection = createDatabaseConnection()
     expect(connection).toBeDefined()
     expect(connection.constructor.name).toBe('DatabaseSync')
   })

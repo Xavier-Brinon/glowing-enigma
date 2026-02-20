@@ -179,3 +179,132 @@ explicitly testing persistence across process restarts. If you ever
 find a =*.db= file appearing in =git status= during a test run, that
 is a signal that a test is using a file-backed database and should be
 switched to =:memory:=.
+
+-----
+
+* 2026-02-20 — scaffold-and-pipes / Phase 4 (database connection, continued)
+
+** Explicit Resource Management: the =using= declaration
+
+*** The problem it solves
+
+Resources like database connections, file handles, and network sockets
+must be explicitly closed after use. The traditional pattern is
+=try/finally=:
+
+#+begin_src typescript
+const connection = createDatabaseConnection()
+try {
+  const row = connection.prepare('SELECT 1').get()
+  expect(row).toBeDefined()
+} finally {
+  connection.close()   // must not forget this
+}
+#+end_src
+
+This is verbose and fragile. If you add a second resource, you nest
+another =try/finally=. If multiple resources throw during cleanup, only
+the last error surfaces — earlier ones are silently swallowed.
+
+*** What =using= does
+
+=using= is a new JavaScript declaration (TC39 Explicit Resource
+Management proposal, shipping in Node 22+) that ties a resource's
+lifetime to the enclosing lexical scope. When the scope exits — whether
+by normal return, =return=, =throw=, or =break= — the runtime
+automatically calls =resource[Symbol.dispose]()=.
+
+#+begin_src typescript
+{
+  using connection = createDatabaseConnection()
+  const row = connection.prepare('SELECT 1').get()
+  expect(row).toBeDefined()
+  // connection[Symbol.dispose]() called here automatically
+}
+#+end_src
+
+Think of it as the JavaScript equivalent of C++'s RAII, Rust's =Drop=
+trait, Python's =with= statement, or C#'s =using= block.
+
+*** The contract: =Symbol.dispose=
+
+For =using= to work, the object must implement =[Symbol.dispose]()=.
+Node's =DatabaseSync= already does this natively (it calls
+=db.close()= under the hood). You can verify:
+
+#+begin_src typescript
+import { DatabaseSync } from 'node:sqlite'
+const db = new DatabaseSync(':memory:')
+console.log(Symbol.dispose in db)  // true
+#+end_src
+
+For your own classes, you implement it explicitly:
+
+#+begin_src typescript
+class MyResource {
+  [Symbol.dispose]() {
+    // cleanup logic here
+  }
+}
+#+end_src
+
+*** Error handling guarantees
+
+=using= provides stronger guarantees than =try/finally= when multiple
+resources are involved. All disposers run in reverse declaration order
+(LIFO — last acquired, first released), and if both the body and a
+disposer throw, the errors are aggregated into a =SuppressedError=
+rather than one silently eating the other.
+
+#+begin_src typescript
+{
+  using db1 = openFirstDb()    // acquired first
+  using db2 = openSecondDb()   // acquired second
+  doWork(db1, db2)
+  // db2[Symbol.dispose]() runs first (LIFO)
+  // db1[Symbol.dispose]() runs second
+  // both guaranteed to run even if doWork() throws
+}
+#+end_src
+
+*** TypeScript setup required
+
+=using= needs two things in =tsconfig.json=:
+
+1. =target= must be =ES2024= or higher (so the compiler emits the
+   disposal logic).
+2. =lib= must include =esnext.disposable= (so =Symbol.dispose= is
+   typed).
+
+#+begin_src json
+{
+  "compilerOptions": {
+    "target": "ES2024",
+    "lib": ["ES2024", "DOM", "DOM.Iterable", "esnext.disposable"]
+  }
+}
+#+end_src
+
+*** When to use =using= vs =await using=
+
+| Scenario                        | Declaration      |
+|---------------------------------|------------------|
+| Synchronous cleanup (=close()=) | =using=          |
+| Async cleanup (=await flush()=) | =await using=    |
+
+=DatabaseSync= is synchronous, so =using= is correct here. For async
+resources (e.g. a network connection that needs =await conn.drain()=
+before closing), implement =[Symbol.asyncDispose]()= and use =await
+using= instead.
+
+*** Rule of thumb
+
+If you find yourself writing =try/finally= to clean up a resource,
+ask: does this object implement =Symbol.dispose=? If yes, reach for
+=using=. If not, add the implementation — it is a one-liner for most
+resources. Explicit resource management is not just a convenience; it
+is the correct way to reason about resource lifetimes in JavaScript.
+
+*** Further reading
+
+- MDN reference: [[https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/using][using — JavaScript | MDN]]

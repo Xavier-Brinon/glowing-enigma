@@ -1,0 +1,529 @@
+#+title: Teaching Document Style Guide
+#+author: Claude Code
+
+This style guide defines how to create teaching documents for the
+Marina codebase. Follow this guide to produce consistent, deeply
+educational content that helps readers internalize programming
+concepts through real code.
+
+-----
+
+* Purpose and Philosophy
+
+Each teaching document exists to help a developer *deeply understand
+a concept* — not just learn the syntax, but build the mental model
+needed to apply it correctly, debug it confidently, and recognize when
+to use (or avoid) it.
+
+The approach is:
+
+1. *Grounded in reality* — Every concept is taught through actual
+   code from our codebase, not toy examples
+2. *Problem-first* — Start with the bug, the confusion, or the
+   suboptimal code that motivates the concept
+3. *Show the reasoning* — Explain /why/, not just /what/. Show
+   trade-offs, not just best practices
+4. *Make it stick* — Use visual aids, before/after comparisons, and
+   hands-on exercises with solutions
+
+-----
+
+* Document Structure
+
+Every teaching document follows this skeleton. Sections marked
+*(required)* must be present; *(optional)* sections are included
+when relevant.
+
+** 1. Title and Metadata (required)
+
+#+begin_src org
+,#+title: [Concept Name]: [Descriptive Subtitle]
+,#+author: Claude Code
+,#+date: [YYYY-MM-DD]
+
+*Example Source*: =[path/to/real/file.ts]=
+
+-----
+#+end_src
+
+- *Title* should name the concept clearly and include a subtitle
+  that hints at the scope (e.g., "Understanding Query State
+  Management", "A Practical Guide", "When Is It Actually Necessary?")
+- *Example Source* is the primary codebase file that inspired or
+  demonstrates the concept. There can be multiple.
+
+** 2. Table of Contents (required)
+
+Org-mode generates a table of contents automatically. To include one,
+add the following keyword near the top of the file:
+
+#+begin_src org
+,#+OPTIONS: toc:3
+#+end_src
+
+This inserts a TOC up to heading depth 3 when exporting. In Emacs,
+use =C-c C-e= to export or =org-cycle= to navigate headings directly.
+Aim for 7–10 top-level sections.
+
+** 3. Introduction / What Is It? (required)
+
+Open with a clear, concise explanation of the concept. This section
+should:
+
+- Define the concept in 2–3 paragraphs
+- Show the basic syntax or API if applicable
+- State /why/ understanding this matters — what bugs or design
+  problems it prevents
+
+If the document originated from a real bug, open with a "story hook":
+
+#+begin_src org
+,* Introduction: A Real-World Bug
+
+This teaching document was born from a real bug in the Marina codebase.
+The =EnrichmentTarget= component showed an infinite loading spinner when...
+
+,** The Symptom
+...
+
+,** The Root Cause (Spoiler)
+The fix involved understanding three interconnected concepts:
+1. ...
+#+end_src
+
+** 4. The Problem / Motivation (required)
+
+Show the code or situation that goes wrong /without/ the concept. This
+creates the "itch" that the teaching scratches. Use real code from the
+codebase where possible.
+
+Structure this as:
+
+- *The Problem* heading
+- *Before* code with =# ❌= markers on problematic lines
+- Brief explanation of what goes wrong (the symptom, not the full
+  solution yet)
+
+** 5. Real-World Example: Our Codebase (required)
+
+The centrepiece of every document. Show the actual code from our
+codebase and use it as the vehicle for teaching the concept. Include:
+
+- The real file path
+- The actual types, function signatures, and data structures involved
+- Explain how the concept manifests in /this specific code/
+
+This is what differentiates these docs from generic tutorials — the
+reader sees how the concept applies to code they work with daily.
+
+** 6. Deep Explanation (required)
+
+The core teaching section. This is where you build the mental model.
+Use multiple subsections as needed. Key techniques:
+
+*** Visual Aids
+
+Use ASCII diagrams liberally for:
+
+- *Flowcharts* for decision logic or type resolution
+- *Tree structures* for nested data or component hierarchies
+- *Timelines* for state transitions or async sequences
+- *Tables* for comparing behaviours, states, or options
+
+#+begin_src org
+,*** Visual Representation
+
+,#+begin_example
+errorPolicy: 'none' (default)
+┌─────────────────────────────────────────┐
+│  Query completes                        │
+│  ├── Success → data: {...}, error: null │
+│  └── Error   → data: null, error: {...} │
+└─────────────────────────────────────────┘
+,#+end_example
+#+end_src
+
+*** Step-by-Step Traces
+
+For complex concepts (type resolution, state machines, render cycles),
+walk through a concrete example step by step:
+
+#+begin_src org
+  ,*** Step 1: Entry Point
+  ,#+begin_example
+  OmitTypenameDeep<ColumnMapping[]>
+  ,#+end_example
+
+  ,*** Step 2: First Condition — Is it an object?
+  ,#+begin_example
+  ColumnMapping[] extends object?
+  → YES (arrays are objects in JavaScript)
+  ,#+end_example
+#+end_src
+
+*** Tables for State Comparisons
+
+Use Org tables to show how different inputs produce different outputs:
+
+#+begin_src org
+  | errorPolicy | Can have =data=? | Can have =error=? | Can have both? |
+  |-------------+------------------+-------------------+----------------|
+  | ='none'=    | Yes              | Yes               | *No*           |
+  | ='all'=     | Yes              | Yes               | *Yes*          |
+#+end_src
+
+** 7. Solutions and Patterns (required)
+
+Show the correct approaches. If there are multiple valid solutions,
+present them all with trade-offs:
+
+#+begin_src org
+  ,*** Solution 1: [Name] ([brief characterisation])
+
+  ,*Before* (problematic):
+  ,#+begin_src typescript
+  // ❌ ...
+  ,#+end_src
+
+  ,*After* (fixed):
+  ,#+begin_src typescript
+  // ✅ ...
+  ,#+end_src
+
+  ,*Pros:*
+  - ...
+
+  ,*Cons:*
+  - ...
+#+end_src
+
+Always include a decision tree or recommendation matrix when
+presenting multiple solutions:
+
+#+begin_src org
+  ,*** Decision Tree
+
+  ,#+begin_example
+  Need to fetch nested/recursive data?
+  │
+  ├─ Is nesting depth fixed and shallow (< 3 levels)?
+  │  └─ Yes → Use fragments to reduce repetition
+  │
+  ├─ Is nesting depth variable or deep?
+  │  └─ ...
+  ,#+end_example
+#+end_src
+
+** 8. Common Anti-Patterns (required)
+
+Explicitly name and show the patterns to avoid. Number them and pair
+each with a fix:
+
+#+begin_src org
+  ,*** Anti-Pattern 1: [Name]
+
+  ,#+begin_src typescript
+  // ❌ BAD - [explanation]
+  function myBadPattern() { ... }
+  ,#+end_src
+  
+  ,*Fix:*
+
+  ,#+begin_src typescript
+  // ✅ GOOD - [explanation]
+  function myGoodPattern() { ... }
+  ,#+end_src
+#+end_src
+
+** 9. Best Practices (required)
+
+A numbered list of actionable guidelines. Each practice should include
+a short code example:
+
+#+begin_src org
+  ,* Best Practices
+
+  ,*** 1. [Imperative instruction]
+
+  ,#+begin_src typescript
+  // ✅ Good: [why]
+  ...
+
+  // ❌ Bad: [why]
+  ...
+  ,#+end_src
+#+end_src
+
+Aim for 4–7 best practices. Keep them specific and actionable, not
+vague ("write good code").
+
+** 10. Practice Exercises (required)
+
+3–4 exercises with progressive difficulty. Each exercise:
+
+- States the problem clearly
+- Provides starter code or a question
+- Includes the solution hidden under a collapsed drawer
+- Has a solution that explains /why/, not just /what/
+
+In Org-mode, use a =SOLUTION= drawer to collapse the answer:
+
+#+begin_src org
+  ,* Practice Exercises
+
+  ,*** Exercise 1: [Action Verb — e.g. "Identify the Bug", "Fix the Hook Order"]
+
+  [Problem description]
+
+  ,#+begin_src typescript
+  // Code to analyse or fix
+  ,#+end_src
+
+  ,**** Solution
+  :PROPERTIES:
+  :VISIBILITY: folded
+  :END:
+
+  ,*Problem:* [What's wrong and why]
+
+  ,*Fixed:*
+
+  ,#+begin_src typescript
+  // Corrected code
+  ,#+end_src
+#+end_src
+
+*Exercise types to include (pick from these):*
+
+| Type       | Description                                | Example                              |
+|------------+--------------------------------------------+--------------------------------------|
+| *Identify* | Find the bug or anti-pattern in given code | "What's wrong with this component?"  |
+| *Fix*      | Correct broken code                        | "Fix the hook order"                 |
+| *Refactor* | Improve working but suboptimal code        | "Reduce repetition using fragments"  |
+| *Design*   | Create a solution from requirements        | "Design a split query strategy"      |
+| *Trace*    | Walk through execution step by step        | "What is =OmitTypenameDeep<Input>=?" |
+| *Audit*    | Perform a codebase investigation           | "Find all uses of =errorPolicy="     |
+
+** 11. Summary (required)
+
+Two parts:
+
+*Key Takeaways* — Numbered list of 4–7 points. These should be the
+"if you remember nothing else" items.
+
+*Quick Reference* — A table or code block for fast lookup:
+
+#+begin_src org
+  ,*** Quick Reference
+
+  | Concept             | Wrong                      | Right                         |
+  |---------------------+----------------------------+-------------------------------|
+  | Hook placement      | After early return         | Before any returns            |
+  | Conditional queries | =if (x) useQuery()=        | =useQuery({ skip: !x })=      |
+#+end_src
+
+** 12. Related Documents and Further Reading (required)
+
+#+begin_src org
+  ,* Related Documents
+
+  - [[./teaching_xxx.org][teaching_xxx]] — Brief description
+
+  -----
+
+  ,* Further Reading
+
+  - [[url][Link title]] — Brief description
+  - ...
+
+  -----
+
+  ,*Questions or suggestions?* File an issue or submit a PR to improve this guide!
+#+end_src
+
+- *Related Documents* link to other teaching docs in this folder
+  using Org-mode's =[[file][description]]= link syntax
+- *Further Reading* links to official documentation, blog posts, or
+  external resources
+- Always end with the standard footer line
+
+-----
+
+* Writing Style
+
+** Tone
+
+- *Educational but practical* — Teach like a senior colleague
+  explaining to a mid-level developer
+- *Acknowledge trade-offs* — Avoid dogmatism. Show when rules have
+  exceptions
+- *Be concrete* — Every abstract statement should be backed by a
+  code example
+- *Use "we" and "our codebase"* — The reader is part of the team
+
+** Code Examples
+
+- Always use *TypeScript* (matching the codebase)
+- Use *=// ❌ BAD=* and *=// ✅ GOOD=* markers on code blocks
+- Include *comments on the problematic or important lines* (not every line)
+- Show *before/after* pairs whenever demonstrating an improvement
+- Use *real types and names* from the codebase — avoid =Foo=, =Bar=, =MyThing=
+- Include the *file path* as a comment when showing codebase code:
+
+#+begin_src typescript
+// src/apolloReactHooksHelper.ts
+export const getQueryState = ({ error, loading, data }: QueryResult): QueryState => {
+#+end_src
+
+** Formatting
+
+- Use =-----= (five dashes) for horizontal rules between major sections
+- Use =*= for top-level sections, =**= for subsections, =***= for sub-subsections
+- Use *bold* (=*bold*=) for key terms on first introduction
+- Use Org-mode =#+begin_quote= blocks for critical insights or rules:
+
+#+begin_src org
+  ,#+begin_quote
+  ,*When a query is skipped, =getQueryState= returns =QueryState.Initial=.*
+  ,#+end_quote
+#+end_src
+
+- Use =code spans= (==code==) for inline code references (=useCallback=,
+  =skip=, =QueryState.Initial=)
+- Use Org tables for any comparison of 3+ items
+- Keep paragraphs short (2–4 sentences)
+
+** Length
+
+A teaching document should be *thorough enough to stand alone*. The
+reader should be able to understand the concept deeply without
+referring to external resources. Typical length: *400–700 lines of
+Org* (roughly 15–30 pages when exported). This is intentionally
+long — these are deep-dive references, not quick tips.
+
+-----
+
+* Content Principles
+
+** 1. Anchor Everything in Real Code
+
+Never teach a concept in the abstract when a codebase example exists.
+The progression is:
+
+1. Show the *actual code* from the codebase
+2. Identify the *concept at play* in that code
+3. Explain the *general principle*
+4. Return to the *codebase code* to show the fix or improvement
+
+** 2. Make the "Wrong Way" Vivid
+
+Spend nearly as much time on the *anti-pattern* as the *correct
+pattern*. Show:
+
+- What the wrong code looks like
+- What goes wrong at runtime or compile time
+- Why someone might write it that way (it often seems reasonable!)
+- What symptom the reader would observe
+
+** 3. Build Mental Models, Not Just Rules
+
+Don't just say "always check error first." Explain:
+
+- What Apollo's state looks like during a refetch cycle
+- Why =loading= and =error= can coexist
+- Draw a timeline showing the state transitions
+- Then the rule emerges naturally from understanding
+
+** 4. Show the Investigation Process
+
+When the document originated from debugging a real issue, show how the
+investigation unfolded:
+
+- What was observed (symptom)
+- What was checked first
+- What was the root cause
+- How was it confirmed
+
+This teaches debugging skills alongside the technical concept.
+
+** 5. Connect to Other Concepts
+
+Concepts don't exist in isolation. Cross-reference related teaching
+documents and explain how concepts interact:
+
+#+begin_src org
+  ,*** Related Concepts
+
+  This bug involved three interconnected concepts:
+  1. *React's Rules of Hooks* (see [[./teaching_hooks_conditional_rendering_and_apollo_skip.org]])
+  2. *Apollo's skip behaviour* (this document)
+  3. *Context data flow* (see [[./teaching_react_context_design.org]])
+#+end_src
+
+-----
+
+* Naming Convention
+
+Files are named: =teaching_[concept_in_snake_case].org=
+
+Examples:
+
+- =teaching_typeguards.org=
+- =teaching_usecallback_necessity.org=
+- =teaching_hooks_conditional_rendering_and_apollo_skip.org=
+- =teaching_graphql_query_optimization.org=
+
+The concept name should be specific enough that a developer can find
+the right document by scanning filenames.
+
+-----
+
+* Checklist Before Finalising
+
+Use this checklist to verify a teaching document is complete:
+
+- [ ] Title (=#+title=), author, date, and example source present
+- [ ] =#+OPTIONS: toc:3= or equivalent TOC directive present
+- [ ] Opens with a clear explanation or real-world bug story
+- [ ] Contains at least one real codebase example with file path
+- [ ] Has visual aids (ASCII diagrams, Org tables, or flowcharts)
+- [ ] Shows before/after code with ❌/✅ markers
+- [ ] Includes 3+ common anti-patterns with fixes
+- [ ] Has 4–7 numbered best practices
+- [ ] Contains 3–4 exercises with folded =:VISIBILITY: folded= solutions
+- [ ] Summary has "Key Takeaways" numbered list
+- [ ] Summary has a quick reference table or decision tree
+- [ ] Links to related teaching documents using Org link syntax
+- [ ] Links to external documentation / further reading
+- [ ] Ends with the standard footer line
+- [ ] Length is 400–700 lines (comprehensive, not superficial)
+
+-----
+
+* Example Prompt for Generating a Teaching Document
+
+When asking an agent to produce a new teaching document, provide:
+
+1. *The concept* to teach (e.g., "React Error Boundaries")
+2. *The source material* — the code, PR, bug, or documentation that
+   demonstrates it (e.g., "look at =src/comps/ErrorBoundary.tsx= and
+   how it's used across the app")
+3. *This style guide* — point the agent to
+   =Teaching/teachingStyleguide.org=
+
+Prompt template:
+
+#+begin_example
+Read the concept documentation at [source]. Then read the teaching style guide at
+Teaching/teachingStyleguide.org. Write a teaching document that deeply explains
+[concept] following the style guide. Ground all examples in real code from our
+codebase. The document should help me understand [concept] well enough to apply
+it correctly, debug issues related to it, and recognise anti-patterns.
+#+end_example
+
+-----
+
+*This style guide itself should evolve.* When a new teaching
+document introduces a particularly effective technique (a new type of
+exercise, a better visual format, etc.), update this guide to capture
+it.
