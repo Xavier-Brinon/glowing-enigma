@@ -25,7 +25,8 @@ context: |
   ## Architecture Constraints
   - One `npm run dev` starts everything (dotenvx run -- prefix in package.json)
   - Server functions (createServerFn) are colocated with the route files that use them
-  - All database access isolated in src/lib/db.ts
+  - All database access isolated in src/lib/db.ts — factory function, not singleton
+  - Resource ownership is lexical: `using db = createDatabaseConnection()` per handler — no pooling, no shared connections
   - State machines defined in src/machines/ — one file per machine
   - Book lifecycle: to-read → reading → done (modelled as XState machine)
   - Status transitions go through send({ type: 'EVENT' }), never direct string assignment
@@ -132,7 +133,7 @@ context: |
 
   ### Implementation Rules
   TypeScript: strict mode, no `any`, explicit function signatures, unknown + type guards when type is truly unknown
-  Server functions: all CRUD via createServerFn, every one has inputValidator, colocated with its route file, all DB calls through src/lib/db.ts
+  Server functions: all CRUD via createServerFn, every one has inputValidator, colocated with its route file, all DB calls through src/lib/db.ts using `using db = createDatabaseConnection()` for automatic disposal
   State: status transitions via send({ type: 'EVENT' }) on XState machine only — never book.status = '...' directly
   Errors: no empty catch blocks, server functions return structured errors, UI shows error states
   Env vars: npx dotenvx set KEY value only — never edit .env by hand; .env committed (encrypted), .env.keys gitignored
@@ -201,7 +202,8 @@ context: |
   - TanStack Query used for all client-side data fetching
   - XState machine drives all book status transitions (not direct string assignment)
   - useState only for trivial UI state (modals, toggles)
-  - All database access isolated in src/lib/db.ts
+  - All database access isolated in src/lib/db.ts — factory + `using`, not singleton
+  - Database connections use lexical ownership: `using db = createDatabaseConnection()` per handler
   - Server functions colocated with the route files that use them
   - Parameterized queries only — no SQL injection risk
 

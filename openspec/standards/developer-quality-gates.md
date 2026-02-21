@@ -62,6 +62,7 @@ Also verify manually:
 - Every `createServerFn` has an `inputValidator`
 - Server functions live in the route file that uses them
 - Database calls go through `src/lib/db.ts` only
+- Database connections use `using db = createDatabaseConnection()` — one connection per handler, automatic disposal on scope exit
 
 ### State Management
 

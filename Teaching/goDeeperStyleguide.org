@@ -57,7 +57,7 @@ a shared *runbook*:
 |----------------------+--------------------------------------------+--------------------------------|
 | Broadening doc       | =FollowUp_[concept].org=                   | Architecture, SRE, evolution   |
 | Assessment doc       | =teaching_[concept]_assessment.org=        | Bloom's taxonomy questions     |
-| Runbook (shared)     | =runBook.org=                              | How to use org-drill (one for all topics) |
+| Runbook (shared)     | =teaching_spaced_repetition_runbook.org=   | How to use org-drill (one for all topics) |
 
 The broadening doc and assessment are always created as a pair. They
 cross-reference each other and both reference the prerequisite
@@ -494,10 +494,10 @@ Every assessment document should reference the shared runbook for
 setup and usage instructions rather than duplicating them:
 
 #+begin_src org
-For setup and daily workflow, see [[./runBook.org][Spaced Repetition Runbook]].
+For setup and daily workflow, see [[./teaching_spaced_repetition_runbook.org][Spaced Repetition Runbook]].
 #+end_src
 
-The runbook (=runBook.org=) is shared across all topics. There is one
+The runbook (=teaching_spaced_repetition_runbook.org=) is shared across all topics. There is one
 runbook for the entire =Teaching/= directory, not one per topic.
 
 -----
@@ -532,13 +532,13 @@ Additional conventions for Go Deeper documents:
 
 | Document type    | Pattern                                   | Example                                           |
 |------------------+-------------------------------------------+---------------------------------------------------|
-| Broadening doc   | =FollowUp_[concept].org=                  | =FollowUp_resource_management.org=                |
+| Broadening doc   | =teaching_[concept]_[aspect].org=         | =teaching_resource_management_architecture.org=   |
 | Assessment doc   | =teaching_[concept]_assessment.org=       | =teaching_resource_management_assessment.org=     |
-| Runbook          | =runBook.org= (shared, one for all)       | =runBook.org=                                     |
+| Runbook          | =teaching_spaced_repetition_runbook.org=  | =teaching_spaced_repetition_runbook.org=          |
 
 Note: the first concrete broadening doc was named =FollowUpKnowledge.org=
-before this convention was established. New documents should follow the
-=FollowUp_[concept].org= pattern.
+before this convention was established; it is now =teaching_resource_management_architecture.org=.
+New documents should follow the =teaching_[concept]_[aspect].org= pattern.
 
 -----
 
@@ -636,7 +636,7 @@ GUIDE HIERARCHY
        │
        ├──▶ FollowUp_*.org          (broadening documents)
        ├──▶ *_assessment.org        (assessment documents)
-       └──▶ runBook.org             (shared learner runbook)
+       └──▶ teaching_spaced_repetition_runbook.org  (shared learner runbook)
 #+end_example
 
 The teaching styleguide owns all shared conventions (tone, formatting,

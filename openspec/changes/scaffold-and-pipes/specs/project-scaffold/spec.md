@@ -53,20 +53,26 @@ be listed in `.gitignore` and MUST NOT be committed.
 
 ### Requirement: Database connection module exists
 
-The project SHALL provide `src/lib/db.ts` that opens a `node:sqlite`
-`Database` connection using the `DATABASE_PATH` environment variable and
-exports it as the default export. No tables are created at this stage.
+The project SHALL provide `src/lib/db.ts` that exports a
+`createDatabaseConnection()` factory function. The factory reads the
+`DATABASE_PATH` environment variable, validates it, and returns a
+`DatabaseSync` instance. Callers use the `using` declaration to guarantee
+disposal. No tables are created at this stage.
 
-#### Scenario: db module imports without error
+#### Scenario: factory returns a valid connection
 
-- **WHEN** a test imports `src/lib/db.ts`
-- **THEN** no exception is thrown and the exported value is a `node:sqlite`
-  `Database` instance
+- **WHEN** a test calls `createDatabaseConnection()` with `DATABASE_PATH` set
+- **THEN** the returned value is a `DatabaseSync` instance ready for queries
+
+#### Scenario: connection is disposed via `using`
+
+- **WHEN** a caller wraps the result with `using db = createDatabaseConnection()`
+- **THEN** `db.close()` is called automatically when the block exits, even on throw
 
 #### Scenario: DATABASE_PATH is required
 
 - **WHEN** `DATABASE_PATH` is not set in the environment
-- **THEN** `src/lib/db.ts` throws an error at import time rather than
+- **THEN** `createDatabaseConnection()` throws an error rather than
   silently opening a database at an undefined path
 
 ### Requirement: Vitest is configured and a smoke test passes

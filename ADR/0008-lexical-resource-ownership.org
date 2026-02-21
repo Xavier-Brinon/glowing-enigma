@@ -1,0 +1,225 @@
+#+title: Adopt Lexical Resource Ownership for Database Connections
+#+author: HaQadosch
+#+date: [2026-02-21 Sat]
+#+startup: indent
+* Status
+
+Accepted
+
+* Context and Problem Statement
+
+The project uses =node:sqlite= (=DatabaseSync=) for database access.
+Every piece of code that touches the database needs a connection, and
+that connection must be closed when the work is done. If it is not
+closed, the file handle leaks; if enough leak, the process runs out of
+file descriptors and crashes.
+
+There are two design questions this ADR resolves:
+
+1. *Module shape*: Should =src/lib/db.ts= export a singleton connection
+   or a factory function?
+2. *Ownership model*: Who is responsible for closing a connection — the
+   module that creates it, the caller that uses it, or a shared pool?
+
+These questions are related but distinct. The first determines the API
+surface; the second determines the lifecycle guarantee.
+
+* Options Considered
+
+** Option A: Module-level singleton
+
+Export a single =db= constant created at module load time. Every
+consumer imports the same instance.
+
+#+begin_src typescript
+// db.ts
+export const db = new DatabaseSync(process.env.DATABASE_PATH!)
+#+end_src
+
+Pros:
+- Simplest possible API — import and use
+- One connection for the entire process
+- No disposal ceremony at call sites
+
+Cons:
+- Ambiguous ownership — no single scope is responsible for closing it
+- Disposal depends on process exit; if the process hangs, the
+  connection stays open
+- Cannot be tested in isolation without side effects at import time
+- Module load order determines when the connection opens — fragile
+  in the presence of dynamic imports or test runners
+
+** Option B: Factory function with =using= (lexical ownership)
+
+Export a =createDatabaseConnection()= factory. Callers wrap the result
+with =using= to tie the connection's lifetime to the enclosing scope.
+
+#+begin_src typescript
+// db.ts
+export function createDatabaseConnection(): DatabaseSync { ... }
+
+// caller
+using db = createDatabaseConnection()
+db.prepare('SELECT * FROM books').all()
+// db.close() fires here automatically — even on throw.
+#+end_src
+
+Pros:
+- Ownership is explicit and lexical — the caller that creates the
+  connection also disposes it, automatically, via scope exit
+- Disposal happens even on throw — no leak on error paths
+- Testable: each test gets an independent connection
+- No side effects at import time
+
+Cons:
+- Slightly more ceremony at each call site (=using db = ...=)
+- Opens and closes a connection per handler — more I/O than a
+  singleton
+
+** Option C: Connection pool
+
+A pool creates connections in advance, lends them to callers, and
+reclaims them when callers are done.
+
+Pros:
+- Amortises connection creation cost across many requests
+- Limits maximum concurrent connections
+- Standard in server applications with network databases
+
+Cons:
+- SQLite is in-process — no network round-trip to amortise
+- Adds borrow/return lifecycle, idle timeouts, pool exhaustion
+  handling
+- Significant complexity for zero measurable benefit in a local app
+
+* Decision
+
+Adopt *Option B: factory function with lexical ownership via =using=*.
+
+** Why Not a Singleton?
+
+A module-level singleton creates the connection as a side effect of
+=import=. This makes the connection's lifetime coextensive with the
+module's lifetime — effectively the entire process. There is no natural
+disposal point, so the connection is only closed when the process exits
+(or not at all, if the process crashes).
+
+More concretely, singletons complicate testing. Vitest runs tests in
+parallel by default; a shared singleton introduces ordering
+dependencies and makes it impossible to test =DATABASE_PATH= validation
+without affecting every other test in the suite.
+
+** Why Not a Pool?
+
+Connection pooling is the standard solution for network databases
+(PostgreSQL, MySQL) where opening a connection involves a TCP
+handshake, TLS negotiation, and authentication. For SQLite, opening a
+connection is a local file operation (~1ms). The overhead of pool
+management (borrow, return, idle eviction, max-size enforcement)
+exceeds the cost of simply opening and closing a connection.
+
+If the project migrates to a network database in the future, the
+ownership model should evolve from lexical to pool. This ADR documents
+the current choice and the trigger for revisiting it.
+
+** Why Lexical Ownership?
+
+The =using= declaration ties the connection's lifetime to the enclosing
+block. This is the RAII pattern (Resource Acquisition Is
+Initialisation), established in C++ and adopted by Rust (=Drop=),
+Python (=with=), C# (=using=), and now JavaScript.
+
+Lexical ownership provides three guarantees:
+
+1. *Automatic cleanup*: =Symbol.dispose= fires when the block exits —
+   no manual =try/finally= required.
+2. *Exception safety*: cleanup runs even if the block throws.
+3. *No aliasing risk*: the connection cannot outlive its owning scope
+   (unless deliberately leaked via assignment to an outer variable).
+
+For a single-user, local-only application with no concurrency, lexical
+ownership is the simplest model that provides correct cleanup.
+
+** Scope and Constraints
+
+- =src/lib/db.ts= exports =createDatabaseConnection()= as the sole
+  entry point for database access. No ad-hoc =new DatabaseSync()= calls
+  elsewhere.
+- Every =createServerFn= handler opens its own connection via
+  =using db = createDatabaseConnection()=.
+- No shared or cached connections between handlers.
+- No connection pool, container-owned connection, or singleton.
+
+** When to Revisit
+
+This decision should be revisited if any of the following occur:
+
+- The project migrates from SQLite to a network database (PostgreSQL,
+  MySQL) — connection creation cost becomes non-trivial, pooling is
+  warranted.
+- The app serves concurrent users — contention on a single SQLite
+  file may require WAL mode or a connection pool with controlled
+  concurrency.
+- Profiling shows connection creation is a measurable bottleneck —
+  unlikely for SQLite, but the trigger is measurable data, not
+  speculation.
+
+* Consequences
+
+** Positive
+
+- Every connection has a clear, auditable owner (the =using= block)
+- No resource leaks on error paths — disposal is guaranteed by the
+  language runtime
+- Tests are isolated — each test creates and disposes its own
+  connection
+- No import-time side effects — the module is safe to import without
+  triggering I/O
+- The pattern is consistent with the teaching materials on resource
+  management, reinforcing the learning goals of the project
+
+** Negative
+
+- Each handler opens and closes a connection — slightly more I/O than
+  a singleton (negligible for SQLite)
+- Call sites require the =using= ceremony — a factory call instead of
+  a bare import
+- Developers must remember to use =using=, not bare assignment — a
+  bare =const db = createDatabaseConnection()= compiles but leaks
+
+** Mitigation
+
+- The docstring on =createDatabaseConnection()= includes an =@example=
+  showing the =using= pattern
+- The review checklist includes a line item for connection disposal
+- The developer quality gates document the =using= requirement
+- Future linting rules (or a wrapper type) can enforce =using= at the
+  call site if bare-assignment leaks become a recurring issue
+
+* Ownership Evolution Path
+
+The teaching materials (=Teaching/teaching_resource_management_architecture.org=)
+document three ownership models and their architectural fit:
+
+#+begin_example
+  CLI / local app (now)         Service (future)           High-traffic server
+  ┌──────────────────┐          ┌──────────────────┐       ┌──────────────────┐
+  │  Lexical          │          │  Container        │       │  Pool             │
+  │                   │          │                   │       │                   │
+  │  using db =       │   ──▶   │  class Svc {      │  ──▶  │  pool.acquire()   │
+  │    create()       │          │    db: DB         │       │  using conn =     │
+  │  // per handler   │          │  }                │       │  // borrow        │
+  └──────────────────┘          └──────────────────┘       └──────────────────┘
+#+end_example
+
+This ADR places the project at the left end. Movement to the right is
+driven by concrete requirements (concurrency, network database), not
+speculation.
+
+* References
+
+- [[https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-2.html][TypeScript 5.2 — using Declarations]]
+- [[https://github.com/nicolo-ribaudo/tc39-proposal-explicit-resource-management][TC39 Explicit Resource Management Proposal]]
+- [[https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization][RAII — Wikipedia]]
+- [[file:../Teaching/teaching_resource_management_architecture.org][Teaching: Resource Management in Architecture and Operations]]
+- [[file:../Teaching/teaching_explicit_resource_management.org][Teaching: Explicit Resource Management]]

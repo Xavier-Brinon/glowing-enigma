@@ -1,11 +1,13 @@
 #+title: Resource Management Assessment: Bloom's Taxonomy
 #+author: Claude Code
-#+date: 2026-02-21
+#+date: [2026-02-21]
+#+startup: indent
+#+startup: showall
 #+OPTIONS: toc:3
 
 *Prerequisites*:
 - [[./teaching_explicit_resource_management.org][Explicit Resource Management: =using= and =await using=]]
-- [[./FollowUpKnowledge.org][Going Deeper: Resource Management in Architecture and Operations]]
+- [[./teaching_resource_management_architecture.org][Going Deeper: Resource Management in Architecture and Operations]]
 
 -----
 
@@ -81,14 +83,14 @@ HYBRID APPROACH
 
 *Rating guide:*
 
-| Rating | Meaning                        | Next review        |
-|--------+--------------------------------+--------------------|
-|      0 | Total blackout — no recall     | Again immediately  |
-|      1 | Wrong, but recognised answer   | Again this session |
-|      2 | Wrong, but answer felt close   | Next session       |
-|      3 | Correct, with significant effort | ~3 days          |
-|      4 | Correct, after some thought    | ~7 days            |
-|      5 | Instant, effortless recall     | ~16+ days          |
+| Rating | Meaning                          | Next review        |
+|--------+----------------------------------+--------------------|
+|      0 | Total blackout — no recall       | Again immediately  |
+|      1 | Wrong, but recognised answer     | Again this session |
+|      2 | Wrong, but answer felt close     | Next session       |
+|      3 | Correct, with significant effort | ~3 days            |
+|      4 | Correct, after some thought      | ~7 days            |
+|      5 | Instant, effortless recall       | ~16+ days          |
 
 For L3 (Apply) cards, mentally compose the code structure before
 revealing. You don't need a perfect syntax match — focus on whether
@@ -102,6 +104,9 @@ order, error handling approach).
 /Recall facts, definitions, and basic mechanics./
 
 *** Q1. Name the two symbols used for disposal in JavaScript  :drill:
+:PROPERTIES:
+:ID:       DD4CCE7F-1453-4276-ACAF-B2B690F374B0
+:END:
 
 What are the two well-known symbols that make an object compatible
 with =using= and =await using= respectively?
@@ -115,6 +120,9 @@ with =using= and =await using= respectively?
 =Symbol.asyncDispose= (for =await using=, asynchronous cleanup).
 
 *** Q2. State the disposal order for multiple =using= declarations  :drill:
+:PROPERTIES:
+:ID:       889E02E0-021B-4E94-998C-100DF28D7657
+:END:
 
 If three resources are declared with =using= in the same scope,
 in what order are they disposed? Name the ordering principle.
@@ -128,6 +136,9 @@ LIFO — last declared, first disposed. The third resource is disposed
 first, then the second, then the first.
 
 *** Q3. Name the error type that preserves both a body error and a disposal error  :drill:
+:PROPERTIES:
+:ID:       E05734E0-E24A-45B7-8194-E4E3DE1BBFC4
+:END:
 
 When a =using= block's body throws and the disposer also throws,
 what type wraps both errors? Name its two key properties.
@@ -141,6 +152,9 @@ what type wraps both errors? Name its two key properties.
 error; its =error= property holds the disposal error.
 
 *** Q4. What TypeScript configuration is needed for =using=?  :drill:
+:PROPERTIES:
+:ID:       4319B893-5979-4597-9FA8-5CB4A1D39BE3
+:END:
 
 Name the =compilerOptions= fields (target and lib) required for
 TypeScript to recognise =using= and =await using=.
@@ -154,6 +168,9 @@ TypeScript to recognise =using= and =await using=.
 ="esnext.disposable"=.
 
 *** Q5. What does RAII stand for, and where did it originate?  :drill:
+:PROPERTIES:
+:ID:       3747E416-3067-4319-B0D8-4388040D73F4
+:END:
 
 **** Answer
 :PROPERTIES:
@@ -164,6 +181,9 @@ Resource Acquisition Is Initialisation. It originated in C++ in the
 1980s (attributed to Bjarne Stroustrup).
 
 *** Q6. Name the three resource ownership models  :drill:
+:PROPERTIES:
+:ID:       2D8AF16C-25CF-4E9C-85B9-A85FC2D04123
+:END:
 
 List the three ownership models described in the Going Deeper document
 and give a one-line description of each.
@@ -173,11 +193,15 @@ and give a one-line description of each.
 :VISIBILITY: folded
 :END:
 
-1. *Lexical* — resource lifetime tied to a code block (=using=)
-2. *Container* — resource lifetime tied to a class instance
-3. *Pool* — resource created, lent, and reclaimed by a shared pool
+the three models are:
+- Lexical :: resource lifetime tied to a code block (=using=)
+- Container :: resource lifetime tied to a class instance
+- Pool :: resource created, lent, and reclaimed by a shared pool
 
 *** Q7. What happens when =using= is assigned =null= or =undefined=?  :drill:
+:PROPERTIES:
+:ID:       CB484BC5-7546-4C8A-9861-A50EC296A01F
+:END:
 
 **** Answer
 :PROPERTIES:
@@ -188,6 +212,9 @@ The disposal step is skipped — no error is thrown. This supports
 conditional resource acquisition patterns.
 
 *** Q8. Name the JavaScript API for detecting garbage-collected objects  :drill:
+:PROPERTIES:
+:ID:       D13669F2-3E99-4BEE-A816-B9C28F00A440
+:END:
 
 What built-in class lets you register a callback that fires when an
 object is garbage-collected?
@@ -200,6 +227,9 @@ object is garbage-collected?
 =FinalizationRegistry=.
 
 *** Q9. What Linux error code signals file descriptor exhaustion?  :drill:
+:PROPERTIES:
+:ID:       0B40BF6B-82FA-4311-8332-E916829E7DDE
+:END:
 
 Name the error code and the typical default limit per process.
 
@@ -212,6 +242,9 @@ Name the error code and the typical default limit per process.
 file descriptors per process.
 
 *** Q10. Name the class that allows dynamic registration of disposables at runtime  :drill:
+:PROPERTIES:
+:ID:       F42A4696-2ED7-4646-9E00-D3B1B979F2F2
+:END:
 
 What standard class lets you call =.use(resource)= in a loop or
 conditionally, collecting resources for LIFO disposal?
@@ -225,6 +258,9 @@ conditionally, collecting resources for LIFO disposal?
 (asynchronous).
 
 *** Q11. List the four registration methods on =DisposableStack=  :drill:
+:PROPERTIES:
+:ID:       A9DE0775-5C3E-4384-963E-98DE6D873977
+:END:
 
 Name each method and describe in one sentence what it registers.
 
@@ -233,10 +269,11 @@ Name each method and describe in one sentence what it registers.
 :VISIBILITY: folded
 :END:
 
-1. =.use(resource)= — registers an object that implements =Symbol.dispose=
-2. =.adopt(value, fn)= — registers a non-disposable value with a custom cleanup function
-3. =.defer(fn)= — registers a cleanup callback with no associated resource
-4. =.move()= — transfers all registrations to a new stack without running disposers
+The four methods are:
+- =.use(resource)= :: registers an object that implements =Symbol.dispose=
+- =.adopt(value, fn)= :: registers a non-disposable value with a custom cleanup function
+- =.defer(fn)= :: registers a cleanup callback with no associated resource
+- =.move()= :: transfers all registrations to a new stack without running disposers
 
 -----
 
@@ -245,6 +282,9 @@ Name each method and describe in one sentence what it registers.
 /Explain concepts in your own words. Predict behaviour./
 
 *** Q1. Explain why LIFO is the natural disposal order  :drill:
+:PROPERTIES:
+:ID:       BCCD7564-B167-4BD5-BD59-D59280DBD9CD
+:END:
 
 In your own words, explain why resources should be disposed in
 reverse declaration order rather than forward order.
@@ -261,6 +301,9 @@ on that connection being open. If you closed the connection first
 resources are cleaned up before their dependencies.
 
 *** Q2. Predict what the caller receives when a =using=-declared variable is returned  :drill:
+:PROPERTIES:
+:ID:       784AF84D-C8BE-4FCB-B02A-087540606DCA
+:END:
 
 A function declares =using db = createDatabaseConnection()= and then
 returns =db=. Describe what the caller gets and why.
@@ -277,6 +320,9 @@ value is evaluated, then disposal runs, then the value is delivered —
 but the value is a reference to the now-disposed object.
 
 *** Q3. Explain the difference between request-scoped and application-scoped resources  :drill:
+:PROPERTIES:
+:ID:       3F605297-1FE0-4327-B126-29F2E3621F71
+:END:
 
 Describe the lifetime of each, and explain why they require different
 cleanup strategies.
@@ -295,6 +341,9 @@ handler or framework lifecycle hook because no lexical scope exit
 triggers their cleanup during normal operation.
 
 *** Q4. Explain why =FinalizationRegistry= is a safety net, not a strategy  :drill:
+:PROPERTIES:
+:ID:       E4EED6D7-4999-4FF8-B71E-BF0F0C432BA8
+:END:
 
 A colleague suggests relying on =FinalizationRegistry= instead of
 =using= for resource cleanup. Explain why this is insufficient.
@@ -314,6 +363,9 @@ memory, not for external resource limits (connection counts, file
 descriptors).
 
 *** Q5. Explain what =SuppressedError= solves compared to plain =try/finally=  :drill:
+:PROPERTIES:
+:ID:       0A7E0B57-3E6E-439A-B02B-33E625ACE24B
+:END:
 
 Describe the specific problem with error handling in =try/finally=
 that =SuppressedError= addresses.
@@ -331,6 +383,9 @@ original body error in =.suppressed=. This preserves the causal chain
 so that debugging can trace back to the real problem.
 
 *** Q6. Explain why a circuit breaker in the OPEN state rejects immediately  :drill:
+:PROPERTIES:
+:ID:       D0448F84-59BC-4DF2-BC77-10E8E0FB0C64
+:END:
 
 Describe what happens when a circuit breaker in the OPEN state
 receives a resource acquisition request, and explain the reasoning.
@@ -348,6 +403,9 @@ system. After a cooldown period, the breaker moves to HALF-OPEN and
 allows a single test request to check recovery.
 
 *** Q7. Explain why capturing the stack trace at acquisition time aids leak detection  :drill:
+:PROPERTIES:
+:ID:       05B91EB7-74C9-4338-94A5-66A5241D92FC
+:END:
 
 An =InstrumentedConnection= captures =new Error().stack= in its
 constructor. Explain why this is more useful than capturing it in
@@ -366,6 +424,9 @@ stack trace leads directly to the line that created the resource
 without proper cleanup.
 
 *** Q8. Explain the relationship between dependency injection and resource ownership  :drill:
+:PROPERTIES:
+:ID:       D0823F2F-7122-4B1E-9547-E2E8A5670F75
+:END:
 
 How does separating resource creation from resource usage affect who
 is responsible for cleanup?
@@ -384,6 +445,9 @@ top-level architectural decision, reducing the risk of scattered
 leaks across the codebase.
 
 *** Q9. Predict the behaviour when =using= is used inside a =for= loop body  :drill:
+:PROPERTIES:
+:ID:       E35FEB84-AEF1-4967-9BB7-9821305BA679
+:END:
 
 What happens to the resource at each iteration? Contrast this with
 Go's =defer= in the same position.
@@ -402,6 +466,9 @@ exits. Go requires an immediately-invoked function to get
 per-iteration cleanup.
 
 *** Q10. Explain why pool exhaustion looks different from a database crash to an SRE  :drill:
+:PROPERTIES:
+:ID:       122C828B-2F03-40A4-839D-2895E600A6F9
+:END:
 
 Describe the symptoms of each and how an SRE would distinguish them.
 
@@ -421,6 +488,9 @@ old connections, (4) checking the database server's own connection
 count.
 
 *** Q11. Explain why =DisposableStack.move()= is necessary  :drill:
+:PROPERTIES:
+:ID:       C3AD4403-CC85-4738-95DE-3B0F5767D72F
+:END:
 
 A factory function uses =using stack = new DisposableStack()= to build
 a set of resources and then returns the stack. Without =.move()=, what
@@ -445,6 +515,9 @@ retains ownership and will dispose its resources when the caller's
 scope exits.
 
 *** Q12. Explain how =.adopt()= differs from wrapping with a class  :drill:
+:PROPERTIES:
+:ID:       E64A570C-055D-4D7D-A7FA-C7FAA2C1C87D
+:END:
 
 Both =stack.adopt(fd, closeFn)= and creating a =DisposableWrapper=
 class can make a non-disposable value work with =using=. Explain when
@@ -475,6 +548,9 @@ than twice, promote it to a wrapper class.
 /Use knowledge in new, concrete situations./
 
 *** Q1. Write a =using= declaration for a function that queries a database and returns the result  :drill:
+:PROPERTIES:
+:ID:       3CDB6DA3-F991-43B7-8213-D5795413FD36
+:END:
 
 Given =createDatabaseConnection()= from our codebase, write a
 function =getBookCount()= that returns the number of books in the
@@ -485,7 +561,7 @@ database. Ensure the connection is cleaned up on any exit path.
 :VISIBILITY: folded
 :END:
 
-#+begin_src typescript
+#+begin_src javascript
 function getBookCount(): number {
   using db = createDatabaseConnection()
   const result = db.prepare('SELECT COUNT(*) as n FROM books').get() as { n: number }
@@ -497,6 +573,9 @@ The connection is disposed after the return value is computed,
 regardless of whether an exception occurs.
 
 *** Q2. Make a third-party class compatible with =using=  :drill:
+:PROPERTIES:
+:ID:       B2CA5B60-AE0D-434E-B07D-335B97BF7A5B
+:END:
 
 You receive a =RedisClient= class that has a =.quit()= method but
 does not implement =Symbol.dispose=. Write a wrapper class that makes
@@ -507,7 +586,7 @@ it usable with =using=.
 :VISIBILITY: folded
 :END:
 
-#+begin_src typescript
+#+begin_src javascript
 class DisposableRedis implements Disposable {
   constructor(readonly client: RedisClient) {}
 
@@ -524,6 +603,9 @@ redis.client.set('key', 'value')
 Use composition (wrapping) rather than inheritance or monkey-patching.
 
 *** Q3. Use =DisposableStack= to manage a dynamic number of resources  :drill:
+:PROPERTIES:
+:ID:       6B9AB546-BAF0-492A-879D-7B0CC6DEA115
+:END:
 
 Write a function that receives an array of file paths, opens a
 database connection for each, runs a PRAGMA command, and disposes all
@@ -534,7 +616,7 @@ connections when done.
 :VISIBILITY: folded
 :END:
 
-#+begin_src typescript
+#+begin_src javascript
 function configureAll(paths: string[]): void {
   using stack = new DisposableStack()
 
@@ -551,11 +633,14 @@ known at write time — =using= alone would require a fixed number of
 declarations.
 
 *** Q4. Add =using= to an existing test to prevent cleanup leaks  :drill:
+:PROPERTIES:
+:ID:       EAF28557-9E91-4058-BDB8-11134B9693F4
+:END:
 
 This test leaks a connection when the assertion fails. Rewrite it
 to ensure cleanup on all exit paths:
 
-#+begin_src typescript
+#+begin_src javascript
 it('finds a book by ID', () => {
   const db = new DatabaseSync(':memory:')
   db.exec('CREATE TABLE books (id INTEGER, title TEXT)')
@@ -571,7 +656,7 @@ it('finds a book by ID', () => {
 :VISIBILITY: folded
 :END:
 
-#+begin_src typescript
+#+begin_src javascript
 it('finds a book by ID', () => {
   using db = new DatabaseSync(':memory:')
   db.exec('CREATE TABLE books (id INTEGER, title TEXT)')
@@ -585,6 +670,9 @@ Replace =const= with =using= and remove the manual =db.close()=.
 If the =expect= throws, =using= still triggers disposal.
 
 *** Q5. Write a conditional =using= declaration  :drill:
+:PROPERTIES:
+:ID:       FD76AF6F-6A32-41AB-BE15-A71B89BEBFEB
+:END:
 
 Write a function that optionally opens a database connection based on
 a feature flag, queries it if available, and returns a default value
@@ -595,7 +683,7 @@ otherwise. Use =using= with a nullish value.
 :VISIBILITY: folded
 :END:
 
-#+begin_src typescript
+#+begin_src javascript
 function getBookCountIfEnabled(): number {
   using db = isFeatureEnabled('database')
     ? createDatabaseConnection()
@@ -612,6 +700,9 @@ function getBookCountIfEnabled(): number {
 handling needed.
 
 *** Q6. Implement =Symbol.dispose= on a class that wraps two resources  :drill:
+:PROPERTIES:
+:ID:       398C69B6-AE9E-4EEF-BDD0-422198F07826
+:END:
 
 Write a =DatabaseBackup= class that holds both a source and a
 destination =DatabaseSync= connection. Implement =[Symbol.dispose]=
@@ -622,7 +713,7 @@ to close both in the correct order.
 :VISIBILITY: folded
 :END:
 
-#+begin_src typescript
+#+begin_src javascript
 class DatabaseBackup implements Disposable {
   private source: DatabaseSync
   private destination: DatabaseSync
@@ -651,11 +742,14 @@ class DatabaseBackup implements Disposable {
 #+end_src
 
 *** Q7. Place a =using= declaration correctly with respect to an early return  :drill:
+:PROPERTIES:
+:ID:       86350D21-1249-4E93-ABD4-72F9366E1C73
+:END:
 
 This function has a resource leak on the guard clause. Fix it by
 repositioning the =using= declaration:
 
-#+begin_src typescript
+#+begin_src javascript
 function findBook(id: number): Book | null {
   if (!isValidId(id)) return null
   using db = createDatabaseConnection()
@@ -676,7 +770,7 @@ when needed.
 
 The buggy version would be:
 
-#+begin_src typescript
+#+begin_src javascript
 function findBook(id: number): Book | null {
   using db = createDatabaseConnection()  // acquired unconditionally
   if (!isValidId(id)) return null         // db disposed here — correct but wasteful
@@ -687,6 +781,9 @@ function findBook(id: number): Book | null {
 Both are leak-free, but the first avoids unnecessary acquisition.
 
 *** Q8. Register a shutdown handler for an application-scoped resource  :drill:
+:PROPERTIES:
+:ID:       E4E8BB83-F3A7-4827-B14A-87747BD9ED10
+:END:
 
 Write a =SIGTERM= handler that disposes a connection pool and an HTTP
 server, with a 10-second timeout and parallel disposal.
@@ -696,7 +793,7 @@ server, with a 10-second timeout and parallel disposal.
 :VISIBILITY: folded
 :END:
 
-#+begin_src typescript
+#+begin_src javascript
 process.on('SIGTERM', async () => {
   console.log('SIGTERM received, shutting down...')
 
@@ -721,6 +818,9 @@ Key points: timeout prevents hanging, =Promise.allSettled= ensures
 both disposal attempts run, exit code reflects success/failure.
 
 *** Q9. Write a =SuppressedError= handler that logs both errors  :drill:
+:PROPERTIES:
+:ID:       2E895C01-2878-455E-8209-1A1460B77B88
+:END:
 
 Write a =try/catch= block around a =using= scope that detects
 =SuppressedError= and logs both the original and disposal errors
@@ -731,7 +831,7 @@ separately.
 :VISIBILITY: folded
 :END:
 
-#+begin_src typescript
+#+begin_src javascript
 try {
   using db = createDatabaseConnection()
   throw new Error('query failed')
@@ -746,6 +846,9 @@ try {
 #+end_src
 
 *** Q10. Write an =async [Symbol.asyncDispose]= method that drains in-flight work  :drill:
+:PROPERTIES:
+:ID:       0088B20C-57B0-45AC-9924-60DC6722FEA3
+:END:
 
 Implement =[Symbol.asyncDispose]= on a class that tracks in-flight
 operations and waits for them to complete before closing.
@@ -755,7 +858,7 @@ operations and waits for them to complete before closing.
 :VISIBILITY: folded
 :END:
 
-#+begin_src typescript
+#+begin_src javascript
 class WorkerPool implements AsyncDisposable {
   private inFlightCount = 0
   private drainResolve: (() => void) | null = null
@@ -783,6 +886,9 @@ class WorkerPool implements AsyncDisposable {
 #+end_src
 
 *** Q11. Use =DisposableStack.adopt()= and =.defer()= together  :drill:
+:PROPERTIES:
+:ID:       6E71665A-97FB-44C5-AC02-E544525DE1E5
+:END:
 
 Write a function that creates a temporary directory, opens a raw file
 descriptor inside it for writing, writes a header line, and ensures
@@ -794,7 +900,7 @@ file descriptor and =.defer()= for directory deletion.
 :VISIBILITY: folded
 :END:
 
-#+begin_src typescript
+#+begin_src javascript
 function writeTemporaryReport(content: string): void {
   using stack = new DisposableStack()
 
@@ -912,7 +1018,7 @@ latency is measurable (>10ms).
 
 *** Q5. Identify the failure modes in this shutdown handler
 
-#+begin_src typescript
+#+begin_src javascript
 process.on('SIGTERM', async () => {
   await database.close()
   await messageQueue.disconnect()
@@ -1180,7 +1286,7 @@ monotonic growth over a sliding window.
 
 *** Q8. Evaluate this =withLogging= wrapper for =using= declarations
 
-#+begin_src typescript
+#+begin_src javascript
 function withLogging<T extends Disposable>(resource: T, name: string): T {
   console.log(`Acquired: ${name}`)
   const original = resource[Symbol.dispose].bind(resource)
@@ -1301,7 +1407,7 @@ A good design should include:
   =[Symbol.asyncDispose]= awaits
 - Agent/connection destruction after draining
 
-#+begin_src typescript
+#+begin_src javascript
 class HttpClient implements AsyncDisposable {
   private agent: http.Agent
   private inFlightCount = 0
@@ -1349,7 +1455,7 @@ A good design should include:
   on disposal
 - An =assertNoLeaks()= function called in =afterEach()=
 
-#+begin_src typescript
+#+begin_src javascript
 const active = new Map<string, string>()
 
 function tracked<T extends Disposable>(resource: T, label: string): T {
@@ -1396,7 +1502,7 @@ A good design should include:
 - A =setTimeout= guard that force-exits on deadline
 - Exit code reflecting success/failure
 
-#+begin_src typescript
+#+begin_src javascript
 type Priority = 'critical' | 'normal' | 'low'
 
 class ShutdownOrchestrator {
@@ -1456,7 +1562,7 @@ A good design should include:
 - A =ConnectionPool= with =acquire()= and =AsyncDisposable= for
   final shutdown
 
-#+begin_src typescript
+#+begin_src javascript
 class PooledConnection implements Disposable {
   private returned = false
 
@@ -1579,7 +1685,7 @@ A good design should:
 - Provide =defer()= for arbitrary cleanup functions
 - Be used via =await using ctx = new RequestContext()= in middleware
 
-#+begin_src typescript
+#+begin_src javascript
 class RequestContext implements AsyncDisposable {
   private stack = new AsyncDisposableStack()
 
@@ -1618,7 +1724,7 @@ A good test should:
 - Create three =using= resources in a bare block
 - Assert the exact event sequence after the block exits
 
-#+begin_src typescript
+#+begin_src javascript
 class OrderTracker implements Disposable {
   constructor(private name: string, private log: string[]) {
     this.log.push(`acquire:${name}`)
@@ -1686,7 +1792,7 @@ code for the reader and the full solution.
 
 *Starter code:*
 
-#+begin_src typescript
+#+begin_src javascript
 class Transaction implements Disposable {
   // TODO: track whether committed.
 
@@ -1706,7 +1812,7 @@ class Transaction implements Disposable {
 
 *Solution:*
 
-#+begin_src typescript
+#+begin_src javascript
 class Transaction implements Disposable {
   private committed = false
 
@@ -1750,7 +1856,7 @@ registration (cleanup is a deregistration call). The function should:
 
 A good design should include:
 
-#+begin_src typescript
+#+begin_src javascript
 async function createApp(config: AppConfig): Promise<AsyncDisposableStack> {
   await using stack = new AsyncDisposableStack()
 
@@ -1818,7 +1924,7 @@ This assessment tested understanding across six cognitive levels:
 * Related Documents
 
 - [[./teaching_explicit_resource_management.org][Explicit Resource Management: =using= and =await using=]] — Learn the mechanics
-- [[./FollowUpKnowledge.org][Going Deeper: Resource Management in Architecture and Operations]] — Broaden to architecture and SRE
+- [[./teaching_resource_management_architecture.org][Going Deeper: Resource Management in Architecture and Operations]] — Broaden to architecture and SRE
 - [[./teachingStyleguide.org][Teaching Document Style Guide]] — How teaching documents are structured
 
 -----

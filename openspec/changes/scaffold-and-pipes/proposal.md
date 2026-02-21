@@ -11,8 +11,8 @@ runnable scaffold, nothing else can be verified end-to-end.
 - Pin Node.js version via `.nvmrc` (24.13 LTS)
 - Configure dotenvx for encrypted environment variables; set
   `DATABASE_PATH`
-- Initialise `node:sqlite` database connection in `src/lib/db.ts`
-  (schema-less at this stage — just the connection)
+- Create `src/lib/db.ts` with a `createDatabaseConnection()` factory
+  for use with `using` (schema-less at this stage — just the connection)
 - Add Vitest for unit testing
 - Add Oxlint for linting (replaces ESLint)
 - Add Oxfmt for formatting (replaces Prettier)

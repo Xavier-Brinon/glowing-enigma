@@ -74,6 +74,7 @@ The implementation is approved when **all** of the following are true:
 - [ ] XState machine drives all book status transitions (not direct string assignment)
 - [ ] `useState` used only for trivial UI state (modals, toggles)
 - [ ] All database access isolated in `src/lib/db.ts`
+- [ ] Database connections created via `using db = createDatabaseConnection()` — no leaked or singleton connections
 - [ ] Server functions colocated with the route files that use them
 - [ ] Parameterized queries only — no SQL injection risk
 

@@ -3,8 +3,8 @@
 The Book Tracker is a greenfield project. No `package.json`, no source
 files, and no database exist yet. This change creates the entire
 foundation that every subsequent change will build on. The tech stack
-choices are already settled via ADRs 0002–0005; this design does not
-revisit them — it specifies how to wire them together into a working,
+choices are already settled via ADRs 0002–0005 and 0008; this design does
+not revisit them — it specifies how to wire them together into a working,
 runnable baseline.
 
 The target is a single `npm run dev` that starts the app and serves a
@@ -20,8 +20,8 @@ configured and passing from the first commit.
 - Pin Node.js via `.nvmrc` (24.13 LTS, required for `node:sqlite`)
 - Configure dotenvx: encrypted `.env` committed, `.env.keys`
   gitignored, `DATABASE_PATH` set
-- Create `src/lib/db.ts` with an open `node:sqlite` connection (no
-  schema yet)
+- Create `src/lib/db.ts` with a `createDatabaseConnection()` factory
+  that returns a `DatabaseSync` instance for use with `using` (no schema yet)
 - Add Oxlint and Oxfmt; both passing on first run
 - Add Vitest; passing on first run
 - Wire `src/routes/__root.tsx` to render a minimal placeholder page
@@ -55,15 +55,48 @@ dotenvx first — and adding the `dotenvx run --` prefix to the `npm run dev`
 script in `package.json` — ensures the env var is injected before any server
 code runs, from the very first execution.
 
-### Decision 3: `src/lib/db.ts` opens the connection but defines no tables
+### Decision 3: `src/lib/db.ts` exports a factory function, not a singleton
 
-Export a single `db` constant (the open `node:sqlite` `Database` instance).
+Export a `createDatabaseConnection()` factory that returns a `DatabaseSync`
+instance. Callers use the `using` declaration to guarantee the connection is
+closed when the owning scope exits — even on throw.
+
+```ts
+using db = createDatabaseConnection()
+const row = db.prepare('SELECT COUNT(*) AS n FROM books').get()
+// db.close() fires automatically when this block exits.
+```
+
 Tables are defined in the next change when there is something to store.
+
+**Why a factory instead of a module-level singleton?** A singleton has ambiguous
+ownership — no single scope is responsible for closing it, so disposal depends
+on process exit or manual cleanup. A factory + `using` makes ownership lexical
+and explicit: the caller that creates the connection also disposes it,
+automatically, via scope exit.
 
 **Why not defer `db.ts` entirely?** Having the file exist verifies that
 `node:sqlite` imports correctly under Node 24.13 LTS and that `DATABASE_PATH` is
 resolvable. It also establishes the module boundary that all future database
-code will import from, preventing ad-hoc `new Database()` calls in route files.
+code will import from, preventing ad-hoc `new DatabaseSync()` calls in route
+files.
+
+### Decision 5: Lexical ownership for all database connections
+
+The project uses *lexical ownership* — each connection lives exactly as long as
+the code block that created it. This is the simplest ownership model and the
+right fit for a single-user local app with no concurrency.
+
+Each `createServerFn` handler will independently call
+`using db = createDatabaseConnection()`. No connection pooling, no shared
+singletons, no container-level ownership.
+
+**Why not a connection pool?** SQLite is an in-process database with no network
+round-trip. Opening a connection is cheap (~1ms). Pooling adds complexity
+(borrow/return lifecycle, idle timeouts, pool exhaustion) with no measurable
+benefit for a local app. If the project ever migrates to PostgreSQL or serves
+concurrent users, the ownership model would evolve to container or pool
+ownership — but that decision belongs to a future change, not this one.
 
 ### Decision 4: Add a Vitest smoke test, not an empty test suite
 
@@ -85,4 +118,4 @@ config errors when real tests are added later.
 
 ## Open Questions
 
-None. All technology choices are settled by ADRs 0002–0005.
+None. All technology choices are settled by ADRs 0002–0005 and 0008.

@@ -54,14 +54,14 @@ destruction.
 
 Different languages express RAII differently:
 
-| Language   | Mechanism               | Cleanup trigger              |
-|------------+-------------------------+------------------------------|
-| C++        | Destructors             | Object goes out of scope     |
-| Rust       | =Drop= trait            | Owner goes out of scope      |
-| Python     | =with= / =__exit__=     | Block exits                  |
-| C#         | =using= / =IDisposable= | Block exits                  |
-| Go         | =defer=                 | Function returns             |
-| JavaScript | =using= / =Symbol.dispose= | Block exits               |
+| Language   | Mechanism                  | Cleanup trigger          |
+|------------+----------------------------+--------------------------|
+| C++        | Destructors                | Object goes out of scope |
+| Rust       | =Drop= trait               | Owner goes out of scope  |
+| Python     | =with= / =__exit__=        | Block exits              |
+| C#         | =using= / =IDisposable=    | Block exits              |
+| Go         | =defer=                    | Function returns         |
+| JavaScript | =using= / =Symbol.dispose= | Block exits              |
 
 The architectural insight is that *resource management is not a
 language feature problem — it is an ownership problem*. Who owns the
@@ -81,14 +81,14 @@ This is what =using= provides — and what our codebase uses today.
 In =src/lib/db.test.ts=, the test acquires and disposes a connection
 within a single =it= block:
 
-#+begin_src typescript
-// src/lib/db.test.ts — lexical ownership in practice.
-it('creates DatabaseSync instance with DATABASE_PATH', () => {
-  vi.stubEnv('DATABASE_PATH', ':memory:')
-  using connection = createDatabaseConnection()
-  expect(connection).toBeDefined()
-})
-// connection.close() fires here automatically.
+#+description: lexical ownership in practice.
+#+begin_src javascript :file src/lib/db.test.ts
+  it('creates DatabaseSync instance with DATABASE_PATH', () => {
+    vi.stubEnv('DATABASE_PATH', ':memory:')
+    using connection = createDatabaseConnection()
+    expect(connection).toBeDefined()
+  })
+  // connection.close() fires here automatically.
 #+end_src
 
 Best for: short-lived, request-scoped resources. Database connections
@@ -103,22 +103,22 @@ service. The container is responsible for cleanup.
 If our codebase grew a =BookService= class, the database connection
 would be container-owned:
 
-#+begin_src typescript
-class BookService implements Disposable {
-  private db: DatabaseSync
+#+begin_src javascript
+  class BookService implements Disposable {
+    private db: DatabaseSync
 
-  constructor(dbPath: string) {
-    this.db = new DatabaseSync(dbPath)  // owned by BookService
-  }
+    constructor(dbPath: string) {
+      this.db = new DatabaseSync(dbPath)  // owned by BookService
+    }
 
-  findAll(): Book[] {
-    return this.db.prepare('SELECT * FROM books').all() as Book[]
-  }
+    findAll(): Book[] {
+      return this.db.prepare('SELECT * FROM books').all() as Book[]
+    }
 
-  [Symbol.dispose](): void {
-    this.db.close()  // cleaned up when BookService is disposed
+    [Symbol.dispose](): void {
+      this.db.close()  // cleaned up when BookService is disposed
+    }
   }
-}
 #+end_src
 
 Best for: resources that are expensive to create and should be
@@ -129,28 +129,28 @@ reused across multiple operations within a logical unit.
 No single consumer owns the resource. A pool creates, lends, and
 reclaims resources. Consumers borrow and return them.
 
-#+begin_src typescript
-class ConnectionPool implements AsyncDisposable {
-  private available: DatabaseSync[] = []
-  private inUse: Set<DatabaseSync> = new Set()
+#+begin_src javascript
+  class ConnectionPool implements AsyncDisposable {
+    private available: DatabaseSync[] = []
+    private inUse: Set<DatabaseSync> = new Set()
 
-  acquire(): DatabaseSync {
-    const conn = this.available.pop() ?? this.createNew()
-    this.inUse.add(conn)
-    return conn
-  }
+    acquire(): DatabaseSync {
+      const conn = this.available.pop() ?? this.createNew()
+      this.inUse.add(conn)
+      return conn
+    }
 
-  release(conn: DatabaseSync): void {
-    this.inUse.delete(conn)
-    this.available.push(conn)
-  }
+    release(conn: DatabaseSync): void {
+      this.inUse.delete(conn)
+      this.available.push(conn)
+    }
 
-  async [Symbol.asyncDispose](): Promise<void> {
-    for (const conn of [...this.available, ...this.inUse]) {
-      conn.close()
+    async [Symbol.asyncDispose](): Promise<void> {
+      for (const conn of [...this.available, ...this.inUse]) {
+        conn.close()
+      }
     }
   }
-}
 #+end_src
 
 Best for: high-throughput systems where creating a resource per
@@ -186,25 +186,25 @@ scope. When a reference leaks — through an alias, a closure, or a
 property assignment — the resource is disposed on schedule, but the
 escaped reference keeps pointing at a dead object:
 
-#+begin_src typescript
-let leakedRef: DatabaseSync
-{
-  using db = createDatabaseConnection()
-  leakedRef = db  // reference escapes the owning scope
-}
-// db is disposed here — leakedRef now points at a closed connection.
-leakedRef.prepare('SELECT 1')  // use-after-free: throws or corrupts
+#+begin_src javascript
+  let leakedRef: DatabaseSync
+  {
+    using db = createDatabaseConnection()
+    leakedRef = db  // reference escapes the owning scope
+  }
+  // db is disposed here — leakedRef now points at a closed connection.
+  leakedRef.prepare('SELECT 1')  // use-after-free: throws or corrupts
 #+end_src
 
 The same trap appears with closures:
 
-#+begin_src typescript
-let queryLater: () => void
-{
-  using db = createDatabaseConnection()
-  queryLater = () => db.prepare('SELECT 1').run()  // captures db
-}
-queryLater()  // db was disposed when the block exited
+#+begin_src javascript
+  let queryLater: () => void
+  {
+    using db = createDatabaseConnection()
+    queryLater = () => db.prepare('SELECT 1').run()  // captures db
+  }
+  queryLater()  // db was disposed when the block exited
 #+end_src
 
 #+begin_example
@@ -320,25 +320,25 @@ time, and the stack handles LIFO disposal of everything on teardown.
 The dependency injection pattern shown above becomes concrete with
 =DisposableStack=:
 
-#+begin_src typescript
-// Composition root: assembles all application resources.
-function createApp(config: AppConfig): DisposableStack {
-  using stack = new DisposableStack()
+#+begin_src javascript
+  // Composition root: assembles all application resources.
+  function createApp(config: AppConfig): DisposableStack {
+      using stack = new DisposableStack()
 
-  // Application-scoped resources, registered in dependency order.
-  const db = stack.use(new DatabaseSync(config.dbPath))
-  const cache = stack.adopt(
-    createRedisClient(config.redisUrl),
-    (client) => client.quit()
-  )
+    // Application-scoped resources, registered in dependency order.
+    const db = stack.use(new DatabaseSync(config.dbPath))
+    const cache = stack.adopt(
+      createRedisClient(config.redisUrl),
+      (client) => client.quit()
+    )
 
-  // Services receive resources as borrowers — no cleanup responsibility.
-  const bookService = new BookService(db, cache)
-  const server = stack.use(createHttpServer(bookService))
+    // Services receive resources as borrowers — no cleanup responsibility.
+    const bookService = new BookService(db, cache)
+    const server = stack.use(createHttpServer(bookService))
 
-  // Transfer ownership to the caller (main function or shutdown handler).
-  return stack.move()
-}
+    // Transfer ownership to the caller (main function or shutdown handler).
+    return stack.move()
+  }
 #+end_src
 
 The composition root:
@@ -357,11 +357,11 @@ the stack disposes =cache= and =db= in reverse order.
 
 Without =DisposableStack=, multi-resource acquisition is fragile:
 
-#+begin_src typescript
-// Without DisposableStack — resource leak on partial failure.
-const db = new DatabaseSync(config.dbPath)
-const cache = createRedisClient(config.redisUrl)  // throws!
-// db is now leaked — nothing will close it.
+#+begin_src javascript
+  // Without DisposableStack — resource leak on partial failure.
+  const db = new DatabaseSync(config.dbPath)
+  const cache = createRedisClient(config.redisUrl)  // throws!
+  // db is now leaked — nothing will close it.
 #+end_src
 
 With =DisposableStack=, the acquisition becomes *transactional*:
@@ -396,20 +396,20 @@ lifetime spans the entire process. =DisposableStack= bridges this gap
 by collecting all application resources and disposing them on
 =SIGTERM=:
 
-#+begin_src typescript
-async function main(): Promise<void> {
-  await using app = new AsyncDisposableStack()
+#+begin_src javascript
+  async function main(): Promise<void> {
+    await using app = new AsyncDisposableStack()
 
-  const pool = app.use(new AsyncDatabasePool(config))
-  const server = app.use(createHttpServer(pool))
+    const pool = app.use(new AsyncDatabasePool(config))
+    const server = app.use(createHttpServer(pool))
 
-  // Register a non-disposable cleanup action.
-  app.defer(() => deregisterFromServiceDiscovery())
+    // Register a non-disposable cleanup action.
+    app.defer(() => deregisterFromServiceDiscovery())
 
-  // Block until SIGTERM.
-  await server.listen(3000)
-  // On SIGTERM: deregister → server closed → pool drained (LIFO).
-}
+    // Block until SIGTERM.
+    await server.listen(3000)
+    // On SIGTERM: deregister → server closed → pool drained (LIFO).
+  }
 #+end_src
 
 Without =DisposableStack=, the shutdown handler would need a manual
@@ -499,36 +499,36 @@ observability into resource usage:
 
 *Key metrics to instrument:*
 
-| Metric                          | What it reveals                     | Alert threshold                 |
-|---------------------------------+-------------------------------------+---------------------------------|
-| Open connections (gauge)        | Current resource pressure           | > 80% of pool max               |
-| Connection acquisition time     | Pool contention                     | p99 > 500ms                     |
-| Connection lifetime             | Potential leaks (very long-lived)   | Any connection > 1 hour         |
-| Disposal errors (counter)       | Cleanup failures                    | Any non-zero rate               |
-| =SuppressedError= occurrences   | Disposal masking real errors        | Any occurrence (investigate)    |
+| Metric                        | What it reveals                   | Alert threshold              |
+|-------------------------------+-----------------------------------+------------------------------|
+| Open connections (gauge)      | Current resource pressure         | > 80% of pool max            |
+| Connection acquisition time   | Pool contention                   | p99 > 500ms                  |
+| Connection lifetime           | Potential leaks (very long-lived) | Any connection > 1 hour      |
+| Disposal errors (counter)     | Cleanup failures                  | Any non-zero rate            |
+| =SuppressedError= occurrences | Disposal masking real errors      | Any occurrence (investigate) |
 
 *What to log on disposal failure:*
 
-#+begin_src typescript
-class InstrumentedConnection implements Disposable {
-  private acquiredAt: number
-  private stack: string
+#+begin_src javascript
+  class InstrumentedConnection implements Disposable {
+    private acquiredAt: number
+      private stack: string
 
-  constructor(private db: DatabaseSync) {
-    this.acquiredAt = Date.now()
-    this.stack = new Error().stack ?? 'unknown'  // capture creation site
-  }
-
-  [Symbol.dispose](): void {
-    const lifetimeMs = Date.now() - this.acquiredAt
-    if (lifetimeMs > 60_000) {
-      console.warn(
-        `Long-lived connection (${lifetimeMs}ms). Acquired at:\n${this.stack}`
-      )
+    constructor(private db: DatabaseSync) {
+      this.acquiredAt = Date.now()
+      this.stack = new Error().stack ?? 'unknown'  // capture creation site
     }
-    this.db.close()
+
+    [Symbol.dispose](): void {
+      const lifetimeMs = Date.now() - this.acquiredAt
+      if (lifetimeMs > 60_000) {
+        console.warn(
+          `Long-lived connection (${lifetimeMs}ms). Acquired at:\n${this.stack}`
+        )
+      }
+      this.db.close()
+    }
   }
-}
 #+end_src
 
 Capturing the stack trace at acquisition time is critical — when a
@@ -615,27 +615,27 @@ outside a =using= scope, or a third-party library might not implement
   when an object is garbage-collected. If a resource is collected
   without disposal, the registry callback fires.
 
-#+begin_src typescript
-// Leak detection using FinalizationRegistry.
-const leakDetector = new FinalizationRegistry((description: string) => {
-  console.error(`RESOURCE LEAK DETECTED: ${description} was garbage-collected without disposal`)
-})
+#+begin_src javascript
+  // Leak detection using FinalizationRegistry.
+  const leakDetector = new FinalizationRegistry((description: string) => {
+    console.error(`RESOURCE LEAK DETECTED: ${description} was garbage-collected without disposal`)
+  })
 
-class TrackedConnection implements Disposable {
-  private disposed = false
+  class TrackedConnection implements Disposable {
+    private disposed = false
 
-  constructor(private db: DatabaseSync, description: string) {
-    leakDetector.register(this, description, this)  // weak ref to self
-  }
+    constructor(private db: DatabaseSync, description: string) {
+      leakDetector.register(this, description, this)  // weak ref to self
+    }
 
-  [Symbol.dispose](): void {
-    if (!this.disposed) {
-      this.disposed = true
-      leakDetector.unregister(this)  // cancel the leak alarm
-      this.db.close()
+    [Symbol.dispose](): void {
+      if (!this.disposed) {
+        this.disposed = true
+        leakDetector.unregister(this)  // cancel the leak alarm
+        this.db.close()
+      }
     }
   }
-}
 #+end_src
 
 - *Periodic audits*: Scheduled checks that compare expected resource
@@ -672,13 +672,13 @@ class TrackedConnection implements Disposable {
 
 ** Quick Reference
 
-| Architectural context | Ownership model | Cleanup mechanism                     |
-|-----------------------+-----------------+---------------------------------------|
-| CLI tool, single op   | Lexical         | =using= (block scope)                 |
-| Service class         | Container       | =Symbol.dispose= on the class         |
-| HTTP server           | Pool            | Borrow/return + pool shutdown          |
-| Composition root      | Multi-resource  | =DisposableStack= + =.move()=         |
-| Application lifetime  | Process-level   | =AsyncDisposableStack= + =SIGTERM=    |
+| Architectural context | Ownership model | Cleanup mechanism                  |
+|-----------------------+-----------------+------------------------------------|
+| CLI tool, single op   | Lexical         | =using= (block scope)              |
+| Service class         | Container       | =Symbol.dispose= on the class      |
+| HTTP server           | Pool            | Borrow/return + pool shutdown      |
+| Composition root      | Multi-resource  | =DisposableStack= + =.move()=      |
+| Application lifetime  | Process-level   | =AsyncDisposableStack= + =SIGTERM= |
 
 -----
 

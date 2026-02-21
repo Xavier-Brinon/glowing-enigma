@@ -311,7 +311,7 @@ When you encounter a leech:
    work for genuinely confusing material
 2. *Go back to the source* — re-read the relevant section of
    [[./teaching_explicit_resource_management.org][teaching_explicit_resource_management.org]] or
-   [[./FollowUpKnowledge.org][FollowUpKnowledge.org]]
+   [[./teaching_resource_management_architecture.org][teaching_resource_management_architecture.org]]
 3. *Rewrite the card* — if the question is ambiguous or the answer
    too dense, simplify it
 4. *Break it down* — one complex card often works better as two
