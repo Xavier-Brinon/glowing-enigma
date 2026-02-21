@@ -1,0 +1,459 @@
+#+title: Spaced Repetition with org-drill: Runbook
+#+author: Claude Code
+#+date: 2026-02-21
+
+-----
+
+* What Is This?
+
+This runbook explains how to use *org-drill* to run spaced repetition
+sessions on our teaching assessment documents. It covers installation,
+daily workflow, configuration, and troubleshooting.
+
+Our assessment documents use a *hybrid approach*: Bloom's Levels 1-3
+(Remember, Understand, Apply) are tagged as drill cards; Levels 4-6
+(Analyse, Evaluate, Create) remain self-study exercises.
+
+#+begin_example
+HYBRID APPROACH
+
+  L1 Remember ──┐
+  L2 Understand ├──→ :drill: tagged  ──→  M-x org-drill
+  L3 Apply     ─┘    (flashcards)         spaced repetition
+
+  L4 Analyse  ──┐
+  L5 Evaluate  ─├──→ no tag           ──→  self-study exercises
+  L6 Create   ──┘    (unchanged)           work through manually
+#+end_example
+
+-----
+
+* The Science: Why Spaced Repetition Works
+
+The *forgetting curve* (Ebbinghaus, 1885) shows that memory decays
+exponentially after learning. Without review, you lose ~70% within
+24 hours.
+
+#+begin_example
+FORGETTING CURVE
+
+  100% ┬─╮
+       │  ╲
+   75% ┤   ╲
+       │    ╲
+   50% ┤     ╲─────── without review
+       │      ╲
+   25% ┤       ╲─────────────────────────
+       │
+    0% ┼──┬──┬──┬──┬──┬──┬──┬──┬──┬──┬──
+       0  1  2  3  4  5  6  7  14 21 30  days
+#+end_example
+
+Spaced repetition fights this by scheduling reviews /just before/ you
+would forget. Each successful recall strengthens the memory and
+pushes the next review further out:
+
+#+begin_example
+SPACED REPETITION INTERVALS
+
+  Review 1 ──→ 1 day
+  Review 2 ──→ 3 days
+  Review 3 ──→ 7 days
+  Review 4 ──→ 16 days
+  Review 5 ──→ 35 days
+  ...
+  Review N ──→ months to years
+#+end_example
+
+The algorithm adapts per card: easy cards space out quickly; difficult
+cards stay in tight rotation until they stick.
+
+-----
+
+* Installation
+
+** Step 1: Install org-drill
+
+From Emacs:
+
+#+begin_src
+M-x package-install RET org-drill RET
+#+end_src
+
+Or add to your init file:
+
+#+begin_src emacs-lisp
+(use-package org-drill
+  :ensure t)
+#+end_src
+
+** Step 2: Verify
+
+Open any assessment file (e.g.,
+=teaching_resource_management_assessment.org=) and run:
+
+#+begin_src
+M-x org-drill
+#+end_src
+
+If cards appear, you're set.
+
+-----
+
+* Daily Workflow
+
+** Starting a Session
+
+1. Open the assessment file in Emacs
+2. =M-x org-drill=
+3. org-drill selects due cards (new + overdue) automatically
+
+A typical session takes *5-10 minutes*. The defaults cap sessions at
+30 items or 20 minutes, whichever comes first.
+
+** During a Session
+
+For each card:
+
+#+begin_example
+┌─────────────────────────────────────────────────────┐
+│                                                     │
+│  1. READ the question heading                       │
+│                                                     │
+│  2. THINK — compose your answer mentally            │
+│     (for L3 code cards: sketch the code structure)  │
+│                                                     │
+│  3. PRESS RET to reveal the answer                  │
+│                                                     │
+│  4. RATE yourself 0-5                               │
+│                                                     │
+│  5. NEXT card appears automatically                 │
+│                                                     │
+└─────────────────────────────────────────────────────┘
+#+end_example
+
+** Keybindings During a Session
+
+| Key   | Action                                      |
+|-------+---------------------------------------------|
+| =RET= | Reveal the answer                           |
+| =0-5= | Rate your recall (after revealing)           |
+| =s=   | Skip this card (come back later)            |
+| =e=   | Edit the current card (opens for editing)   |
+| =q=   | Quit the session (progress is saved)        |
+
+** Rating Guide
+
+How to choose your rating:
+
+| Rating | When to use                            | Effect on scheduling |
+|--------+----------------------------------------+----------------------|
+|      0 | Total blackout — didn't recognise it   | Again immediately    |
+|      1 | Wrong, but recognised the answer       | Again this session   |
+|      2 | Wrong, but answer felt close           | Next session         |
+|      3 | Correct, with significant effort       | ~3 days              |
+|      4 | Correct, after a moment's thought      | ~7 days              |
+|      5 | Instant, effortless recall             | ~16+ days            |
+
+#+begin_quote
+*Rule of thumb:* Be honest. Rating yourself too high feels efficient
+but defeats the purpose — you'll forget and have to relearn from
+scratch. A 3 is a perfectly good score.
+#+end_quote
+
+** Tips for L3 (Apply) Cards
+
+L3 cards ask you to write code. You can't type during a drill
+session, so:
+
+- *Mentally compose* the key structure (which keyword, what order,
+  where the disposal happens)
+- Focus on *concepts*, not syntax — did you get =using= vs =const=
+  right? Did you remember LIFO order?
+- When the answer reveals, check your mental model against the code
+- Rate based on whether your *approach* was correct, not character-
+  perfect recall
+
+** After a Session
+
+org-drill writes scheduling data into each card's =:PROPERTIES:=
+drawer automatically. You'll see entries like:
+
+#+begin_src org
+:PROPERTIES:
+:DRILL_LAST_INTERVAL: 7.0
+:DRILL_REPEATS_SINCE_FAIL: 3
+:DRILL_TOTAL_REPEATS: 5
+:DRILL_FAILURE_COUNT: 1
+:DRILL_AVERAGE_QUALITY: 3.8
+:DRILL_EASE: 2.46
+:DRILL_LAST_QUALITY: 4
+:DRILL_LAST_REVIEWED: [2026-02-28 Fri 09:15]
+:END:
+#+end_src
+
+This is normal — it's how org-drill remembers your learning state.
+Don't edit these by hand.
+
+-----
+
+* Session Types
+
+** Regular Drill (daily use)
+
+#+begin_src
+M-x org-drill
+#+end_src
+
+Reviews due and new cards. This is your bread and butter.
+
+** Cram Mode (before a review or deep dive)
+
+#+begin_src
+M-x org-drill-cram
+#+end_src
+
+Reviews /all/ cards regardless of schedule. Useful when:
+
+- Preparing for a code review where you'll discuss resource management
+- Revisiting a topic after a long break
+- Onboarding a colleague (sit together and drill)
+
+Cards reviewed within the last 12 hours are excluded to prevent
+mindless repetition.
+
+** Resume (continue interrupted session)
+
+#+begin_src
+M-x org-drill-resume
+#+end_src
+
+Picks up where you left off after pressing =q= or =e=.
+
+** Again (retry failed cards)
+
+#+begin_src
+M-x org-drill-again
+#+end_src
+
+Re-drills only the items that were due but not covered in the last
+session (useful if you quit early).
+
+-----
+
+* Configuration
+
+** Recommended Settings
+
+Add to your Emacs init file:
+
+#+begin_src emacs-lisp
+(setq
+ ;; Algorithm: SM5 is the default and works well.
+ org-drill-spaced-repetition-algorithm 'sm5
+
+ ;; Session limits — adjust to your schedule.
+ org-drill-maximum-items-per-session 30    ; cards per session
+ org-drill-maximum-duration 20             ; minutes per session
+
+ ;; Adds slight randomness to intervals so cards don't cluster
+ ;; on the same day.
+ org-drill-add-random-noise-to-intervals-p t
+
+ ;; Adjusts intervals if you review early or late.
+ org-drill-adjust-intervals-for-early-and-late-repetitions-p t
+
+ ;; Where to find drill cards.
+ ;; 'file = current file only (default, recommended)
+ ;; 'directory = all org files in the same directory
+ org-drill-scope 'file)
+#+end_src
+
+** All Configuration Variables
+
+| Variable                                               | Default | Description                                      |
+|--------------------------------------------------------+---------+--------------------------------------------------|
+| =org-drill-spaced-repetition-algorithm=                | ='sm5=  | Algorithm: ='sm2=, ='sm5=, or ='simple8=         |
+| =org-drill-maximum-items-per-session=                  | =30=    | Max cards per session                            |
+| =org-drill-maximum-duration=                           | =20=    | Max minutes per session                          |
+| =org-drill-learn-fraction=                             | =0.5=   | Fraction of session devoted to new cards         |
+| =org-drill-add-random-noise-to-intervals-p=            | =nil=   | Randomise intervals to prevent clustering        |
+| =org-drill-adjust-intervals-for-early-and-late-repetitions-p= | =nil= | Adjust for early/late reviews              |
+| =org-drill-scope=                                      | ='file= | Where to find cards                              |
+| =org-drill-overdue-interval-factor=                    | =1.2=   | How much past due before considered overdue      |
+| =org-drill-days-before-old=                            | =10=    | Days before a card is considered "old"           |
+| =org-drill-leech-failure-threshold=                    | =15=    | Failures before a card is tagged =:leech:=       |
+| =org-drill-hide-item-headings-p=                       | =nil=   | Hide heading text during review                  |
+| =org-drill-cram-hours=                                 | =12=    | Hours since last review to exclude from cram     |
+
+** Algorithms Explained
+
+| Algorithm  | Origin         | Behaviour                                                       |
+|------------+----------------+-----------------------------------------------------------------|
+| =sm2=      | SuperMemo 2.0  | Per-item ease factor, simplest, good starting point             |
+| =sm5=      | SuperMemo 5.0  | Ease factors + global "optimal factor" matrix, adapts over time |
+| =simple8=  | SuperMemo 8    | Per-item adaptation only, experimental                          |
+
+SM5 (default) is recommended. It adapts both per-card difficulty and
+your overall learning pace.
+
+-----
+
+* Leech Management
+
+A *leech* is a card you've failed 15+ times (configurable via
+=org-drill-leech-failure-threshold=). org-drill tags it =:leech:=
+automatically.
+
+When you encounter a leech:
+
+1. *Don't just keep drilling it* — brute-force repetition doesn't
+   work for genuinely confusing material
+2. *Go back to the source* — re-read the relevant section of
+   [[./teaching_explicit_resource_management.org][teaching_explicit_resource_management.org]] or
+   [[./FollowUpKnowledge.org][FollowUpKnowledge.org]]
+3. *Rewrite the card* — if the question is ambiguous or the answer
+   too dense, simplify it
+4. *Break it down* — one complex card often works better as two
+   simpler cards
+
+-----
+
+* Suggested Schedule
+
+#+begin_example
+WEEKLY RHYTHM
+
+  Mon ──→ org-drill (5-10 min)
+  Tue ──→ org-drill (5-10 min)
+  Wed ──→ org-drill (5-10 min) + one L4-L6 exercise (15-20 min)
+  Thu ──→ org-drill (5-10 min)
+  Fri ──→ org-drill (5-10 min)
+  Sat ──→ (rest or cram if preparing for something)
+  Sun ──→ (rest)
+#+end_example
+
+The key is *consistency over volume*. Five minutes daily beats an hour
+on the weekend. org-drill adjusts — if you skip a day, overdue cards
+simply queue up for your next session.
+
+-----
+
+* Troubleshooting
+
+** "No items to review"
+
+All cards are either:
+- Not yet due (wait for the scheduled date), or
+- Already reviewed recently
+
+Run =M-x org-drill-cram= to force a review, or wait until tomorrow.
+
+** Cards appear that I've never seen
+
+New cards (never reviewed) are mixed into regular sessions. The
+=org-drill-learn-fraction= variable controls what proportion of a
+session is new cards (default 0.5 = half).
+
+To focus on reviewing only old cards:
+
+#+begin_src emacs-lisp
+(setq org-drill-learn-fraction 0)
+#+end_src
+
+** org-drill doesn't find any cards
+
+Check that:
+1. The file has headings tagged =:drill:=
+2. The tag is on the question heading (=***= level), not the answer
+3. You're running =M-x org-drill= in the correct buffer
+
+** Scheduling data looks wrong
+
+The =:PROPERTIES:= drawer stores all state. If something is corrupted,
+delete the drill-related properties (=DRILL_*=) from the affected
+card. org-drill will treat it as a new card.
+
+-----
+
+* How Our Assessment Documents Use org-drill
+
+** Card Structure
+
+Each L1-L3 question follows this pattern:
+
+#+begin_src org
+,*** Q1. Question text here  :drill:
+
+Additional context or prompt for the question.
+
+,**** Answer
+:PROPERTIES:
+:VISIBILITY: folded
+:END:
+
+The answer text (or code block).
+#+end_src
+
+- The =:drill:= tag on the =***= heading marks it as a card
+- org-drill shows the heading and body text, hides the =****= sub-
+  heading
+- =RET= reveals the answer
+- =:VISIBILITY: folded= is kept for manual reading (org-drill ignores
+  it during sessions)
+
+** Card Types by Bloom's Level
+
+| Level | Type    | What you're recalling                  | Rating focus              |
+|-------+---------+----------------------------------------+---------------------------|
+| L1    | Fact    | Names, definitions, syntax             | Did I get the fact right? |
+| L2    | Concept | Explanations, predictions, cause/effect | Is my reasoning sound?    |
+| L3    | Code    | Implementation patterns, code structure | Is my approach correct?   |
+
+** Assessment Documents
+
+| Document                                        | Drill cards | Exercises |
+|-------------------------------------------------+-------------+-----------|
+| [[./teaching_resource_management_assessment.org]] | 34 (L1-L3)  | 32 (L4-L6) |
+
+As we create new assessment documents for other topics, they will
+follow the same hybrid pattern.
+
+-----
+
+* Quick Reference
+
+| Task                        | Command                      |
+|-----------------------------+------------------------------|
+| Start a session             | =M-x org-drill=             |
+| Cram all cards              | =M-x org-drill-cram=        |
+| Resume interrupted session  | =M-x org-drill-resume=      |
+| Retry remaining due cards   | =M-x org-drill-again=       |
+| Reveal answer (in session)  | =RET=                        |
+| Rate recall (in session)    | =0= / =1= / =2= / =3= / =4= / =5= |
+| Skip card (in session)      | =s=                          |
+| Edit card (in session)      | =e=                          |
+| Quit session                | =q=                          |
+| Install org-drill           | =M-x package-install RET org-drill= |
+
+-----
+
+* Sources and Further Reading
+
+- [[https://orgmode.org/worg/org-contrib/org-drill.html][org-drill official documentation]] — complete reference for all
+  card types, configuration, and algorithms
+- [[https://github.com/l3kn/org-fc][org-fc (org-flashcards)]] — a more modern alternative to org-drill
+  with a different design philosophy (file-based rather than
+  property-based scheduling)
+- [[https://en.wikipedia.org/wiki/Spaced_repetition][Spaced repetition (Wikipedia)]] — overview of the science and
+  history
+- [[https://en.wikipedia.org/wiki/Leitner_system][Leitner system (Wikipedia)]] — the box-based flashcard system that
+  inspired software implementations
+- [[https://super-memory.com/english/ol/sm2.htm][SM2 algorithm (SuperMemo)]] — the original spaced repetition
+  algorithm paper
+- [[https://ncase.me/remember/][How to Remember Anything Forever-ish (Nicky Case)]] — an
+  interactive visual explainer of spaced repetition
+
+-----
+
+*Questions or suggestions?* File an issue or submit a PR to improve this guide!

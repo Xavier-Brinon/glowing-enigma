@@ -1,0 +1,650 @@
+#+title: Go Deeper Style Guide
+#+author: Claude Code
+
+This style guide defines how to create *Go Deeper* document pairs:
+a broadening document that places a concept in architectural and
+operational context, and a companion assessment with spaced repetition
+support. It complements the [[./teachingStyleguide.org][Teaching Document Style Guide]], which
+covers the prerequisite teaching documents.
+
+-----
+
+* Purpose and Philosophy
+
+A teaching document (=teaching_*.org=) teaches the /mechanics/ of a
+concept — syntax, semantics, how to use it correctly. A Go Deeper
+pair asks what happens /beyond/ that:
+
+#+begin_example
+LEARNING PROGRESSION
+
+  teaching_*.org              Go Deeper pair
+  ┌──────────────┐            ┌──────────────────────────────────┐
+  │  MECHANICS   │            │  BROADENING        ASSESSMENT   │
+  │              │            │                                  │
+  │  What is it? │   ──▶      │  Where does it     Test your    │
+  │  How to use  │            │  fit in the        knowledge    │
+  │  Anti-        │            │  bigger picture?   across all   │
+  │  patterns    │            │                    Bloom's       │
+  │              │            │  What happens      levels        │
+  │  Best        │            │  at scale?                       │
+  │  practices   │            │                    Spaced        │
+  │              │            │  How does it       repetition    │
+  │  Exercises   │            │  evolve as the     for L1-L3     │
+  └──────────────┘            │  system grows?                   │
+                              └──────────────────────────────────┘
+#+end_example
+
+The Go Deeper pair exists to:
+
+1. *Broaden* — Connect the concept to software architecture, SRE,
+   and cross-language patterns
+2. *Deepen* — Move beyond "how to use it" to "when to use it, what
+   trade-offs does it carry, and how does it fail at scale"
+3. *Assess* — Test understanding across all six cognitive levels of
+   Bloom's taxonomy, from recall to original design
+4. *Retain* — Use spaced repetition to consolidate factual and
+   procedural knowledge over time
+
+-----
+
+* Document Set
+
+A Go Deeper set consists of *two documents* and optionally references
+a shared *runbook*:
+
+| Document             | Naming convention                          | Purpose                        |
+|----------------------+--------------------------------------------+--------------------------------|
+| Broadening doc       | =FollowUp_[concept].org=                   | Architecture, SRE, evolution   |
+| Assessment doc       | =teaching_[concept]_assessment.org=        | Bloom's taxonomy questions     |
+| Runbook (shared)     | =runBook.org=                              | How to use org-drill (one for all topics) |
+
+The broadening doc and assessment are always created as a pair. They
+cross-reference each other and both reference the prerequisite
+teaching document.
+
+-----
+
+* Part 1: Broadening Document
+
+** What It Covers
+
+The broadening document takes a concept that was taught mechanically
+and places it in a wider context through *at least two broadening
+lenses*. The lenses depend on the concept — not every topic has the
+same natural extensions.
+
+** Choosing Broadening Lenses
+
+Pick the lenses that genuinely deepen understanding of /this/
+concept. Common lenses include:
+
+| Lens                        | When to use                                              | Example concepts                    |
+|-----------------------------+----------------------------------------------------------+-------------------------------------|
+| *Software architecture*     | The concept involves ownership, lifecycle, or composition | Resource management, state machines |
+| *SRE / operations*          | The concept has failure modes at scale                   | Resource management, caching        |
+| *Cross-language comparison* | Other languages solve the same problem differently       | Resource management, error handling |
+| *Performance*               | The concept has measurable runtime cost or benefit        | =useCallback=, memoisation          |
+| *Testing strategy*          | The concept changes how you test                         | Dependency injection, mocking       |
+| *Security*                  | The concept has security implications                    | Input validation, auth patterns     |
+| *API design*                | The concept affects public interfaces                    | Error types, return values          |
+| *Developer experience*      | The concept affects readability and maintainability       | Type design, naming conventions     |
+
+Every broadening document must include *"How our codebase would
+evolve"* as a subsection within one of the chosen lenses. This
+grounds the broadening in reality.
+
+** Structure
+
+The skeleton below shows the fixed frame (metadata, introduction,
+summary) and the flexible middle (your chosen lenses):
+
+#+begin_src org
+,#+title: Going Deeper: [Concept] in [Lens A] and [Lens B]
+,#+author: Claude Code
+,#+date: [YYYY-MM-DD]
+,#+OPTIONS: toc:3
+
+,*Prerequisite*: [[./teaching_concept.org][Teaching Document Title]]
+
+,-----
+
+,* Table of Contents                                            :TOC:
+
+,-----
+
+,* Introduction
+
+[2-3 paragraphs: what the teaching doc covered, what this doc asks
+differently, link to the companion assessment]
+
+,-----
+
+,* [Concept] as a [Lens A] Concern
+
+,** [Subsections depend on the lens]
+,** How our codebase would evolve
+
+,-----
+
+,* [Concept] as a [Lens B] Concern
+
+,** [Subsections depend on the lens]
+
+,-----
+
+,* Summary
+,** Key Takeaways
+,** Quick Reference
+
+,-----
+
+,* Related Documents
+,* Further Reading
+#+end_src
+
+You may include more than two lenses if the concept warrants it.
+The title should name the chosen lenses (e.g., "in Architecture
+and Operations", "in Performance and Testing").
+
+** Content Principles
+
+*** Ground in the prerequisite
+
+Every section should reference the teaching document's code and
+concepts. The broadening doc does not re-teach mechanics — it
+/builds on/ them. A reader who skipped the teaching doc should feel
+lost, not comfortable.
+
+*** Show the progression
+
+Use an "evolution" diagram showing how the concept's usage changes
+as the system grows. This is the centrepiece of the broadening doc:
+
+#+begin_src org
+,#+begin_example
+[Simple usage]              [Intermediate]             [Production]
+┌──────────────┐            ┌──────────────┐           ┌──────────────┐
+│   Pattern A  │   ──▶      │  Pattern B   │   ──▶     │  Pattern C   │
+│   (current)  │            │  (growing)   │           │  (at scale)  │
+└──────────────┘            └──────────────┘           └──────────────┘
+,#+end_example
+#+end_src
+
+*** Cross-language perspective
+
+Where the concept exists in multiple languages, include a comparison
+table showing how different ecosystems solve the same problem. This
+builds architectural intuition — the pattern is bigger than any one
+language.
+
+*** SRE sections must be concrete
+
+Don't just say "resource leaks are bad." Show:
+- Specific failure modes with numbers (e.g., "PostgreSQL defaults to
+  100 connections")
+- What the symptom looks like to an operator
+- What metrics to instrument
+- What alerts to configure
+
+Use tables for metrics and alert thresholds:
+
+#+begin_src org
+| Metric                  | What it reveals       | Alert threshold     |
+|-------------------------+-----------------------+---------------------|
+| [gauge/counter/histo]   | [what it means]       | [when to alert]     |
+#+end_src
+
+** Length
+
+A broadening document should be *400–650 lines*. This is comparable
+to a teaching document (400–700 lines). Although the broadening doc
+omits exercises and anti-pattern sections, it adds architectural
+diagrams, cross-language comparisons, SRE metrics tables, and
+evolution progressions that fill the space. A broadening doc that
+comes in under 300 lines is likely too shallow; one over 700 is
+likely re-teaching mechanics that belong in the prerequisite.
+
+-----
+
+* Part 2: Assessment Document
+
+** What It Covers
+
+The assessment tests understanding across all six levels of the
+*revised Bloom's taxonomy*:
+
+#+begin_example
+BLOOM'S TAXONOMY (REVISED)
+
+  ┌──────────────────┐
+  │  6. CREATE       │  Design, produce, construct
+  ├──────────────────┤
+  │  5. EVALUATE     │  Justify, critique, defend
+  ├──────────────────┤
+  │  4. ANALYSE      │  Compare, differentiate, organise
+  ├──────────────────┤
+  │  3. APPLY        │  Use in new situations
+  ├──────────────────┤
+  │  2. UNDERSTAND   │  Explain, summarise, predict
+  ├──────────────────┤
+  │  1. REMEMBER     │  Recall, identify, list
+  └──────────────────┘
+#+end_example
+
+** Structure
+
+#+begin_src org
+,#+title: [Concept] Assessment: Bloom's Taxonomy
+,#+author: Claude Code
+,#+date: [YYYY-MM-DD]
+,#+OPTIONS: toc:3
+
+,*Prerequisites*:
+- [[./teaching_concept.org][Teaching Document Title]]
+- [[./FollowUp_concept.org][Broadening Document Title]]
+
+,-----
+
+,* Introduction
+[Explain the assessment, Bloom's diagram, how-to-use section with
+both Self-Study and Spaced Repetition modes]
+
+,-----
+
+,* Level 1: Remember
+,* Level 2: Understand
+,* Level 3: Apply
+,* Level 4: Analyse
+,* Level 5: Evaluate
+,* Level 6: Create
+
+,-----
+
+,* Summary
+,* Related Documents
+#+end_src
+
+** Question Count
+
+Aim for *10–12 questions per level*, totalling 60–72 questions. This
+provides enough coverage to test the concept thoroughly while keeping
+each level focused.
+
+** Question Design by Level
+
+Each Bloom's level demands a different question style. Follow these
+patterns strictly — blurring the boundaries between levels undermines
+the taxonomy's value.
+
+*** Level 1: Remember (recall facts)
+
+- *Verb forms:* Name, State, List, What is, Define
+- *Answer length:* 1–3 sentences
+- *Tagged:* =:drill:=
+- Questions test recall of definitions, syntax, names, configuration
+- Answers are factual — there is one correct answer
+
+#+begin_src org
+,*** Q1. [Question text]  :drill:
+
+[Optional context sentence]
+
+,**** Answer
+:PROPERTIES:
+:VISIBILITY: folded
+:END:
+
+[1-3 sentence factual answer]
+#+end_src
+
+*** Level 2: Understand (explain in own words)
+
+- *Verb forms:* Explain, Predict, Describe, In your own words,
+  Summarise, Contrast
+- *Answer length:* 3–5 sentences
+- *Tagged:* =:drill:=
+- Questions test whether the reader can explain /why/, not just /what/
+- Good L2 questions ask "what happens if..." or "why does X work
+  this way?"
+- Must be distinct from L1: if the answer is a single fact, it is L1
+
+#+begin_src org
+,*** Q1. Explain why [mechanism] works this way  :drill:
+
+[Scenario or context]
+
+,**** Answer
+:PROPERTIES:
+:VISIBILITY: folded
+:END:
+
+[3-5 sentence explanation showing understanding of causation]
+#+end_src
+
+*** Level 3: Apply (use in new situations)
+
+- *Verb forms:* Write, Implement, Rewrite, Use, Fix, Add
+- *Answer length:* Code snippet (5–20 lines) + 1–2 sentence
+  explanation
+- *Tagged:* =:drill:=
+- Questions provide a scenario and ask the reader to produce code
+- Include starter code when the scenario is complex
+- The answer should include a brief explanation of /why/ the code
+  is correct, not just the code
+
+#+begin_src org
+,*** Q1. Write a [thing] that [does something]  :drill:
+
+[Scenario description]
+
+,#+begin_src typescript
+// Starter code (optional)
+,#+end_src
+
+,**** Answer
+:PROPERTIES:
+:VISIBILITY: folded
+:END:
+
+,#+begin_src typescript
+// Solution code
+,#+end_src
+
+[1-2 sentence explanation of key decisions]
+#+end_src
+
+*** Level 4: Analyse (compare, differentiate)
+
+- *Verb forms:* Compare, Differentiate, Analyse, Identify, Trace
+- *Answer length:* 1–2 paragraphs
+- *NOT tagged* (self-study exercise)
+- Questions ask the reader to break down systems, compare approaches,
+  or trace execution
+- Good L4 questions present two alternatives and ask for structural
+  differences, not just preferences
+
+*** Level 5: Evaluate (justify, critique)
+
+- *Verb forms:* Critique, Defend, Evaluate, Justify, Assess
+- *Answer length:* 1–2 paragraphs
+- *NOT tagged* (self-study exercise)
+- Questions present a design or claim and ask the reader to assess it
+- Good L5 questions have nuanced answers — the design is neither
+  wholly good nor wholly bad
+- Use "Defend or challenge: [quote]" format for opinion-based
+  questions
+
+*** Level 6: Create (design, produce)
+
+- *Verb forms:* Design, Create, Produce, Specify
+- *Answer length:* Code (10–40 lines) + design rationale
+- *NOT tagged* (self-study exercise)
+- Questions ask the reader to design something original
+- Answers should begin with "A good design should include:" followed
+  by a checklist, then example code — this frames the answer as one
+  valid approach, not the only approach
+- Do not give overly complete solutions — leave room for the reader's
+  own design decisions
+
+** Within-Level Difficulty
+
+Questions within each level should be ordered from *easier to harder*.
+The first question at any level should be approachable; the last
+should stretch. This gives the reader a sense of progression even
+within a single level.
+
+** Avoiding Common Pitfalls
+
+| Pitfall                            | How to avoid                                    |
+|------------------------------------+-------------------------------------------------|
+| L2 question that is really L1      | If the answer is a single fact, it is L1         |
+| L3 question that is really L4      | If it asks to /compare/, it is L4, not L3        |
+| L6 answer that is too complete     | Use "should include:" framing, not full solutions |
+| Questions that overlap with Part 1 | Questions test knowledge, Part 1 teaches it       |
+| All questions at the same difficulty | Order easier → harder within each level         |
+| Trick questions                    | Every question should have a clear, defensible answer |
+
+-----
+
+* Spaced Repetition Integration
+
+** The Hybrid Approach
+
+Levels 1–3 are tagged =:drill:= for use with [[https://orgmode.org/worg/org-contrib/org-drill.html][org-drill]]. Levels 4–6
+are untouched self-study exercises.
+
+#+begin_example
+WHY THIS SPLIT?
+
+  Spaced repetition excels at:        It struggles with:
+  ┌─────────────────────────┐         ┌─────────────────────────┐
+  │ Facts (L1)              │         │ Extended reasoning (L4) │
+  │ Explanations (L2)       │         │ Nuanced critique (L5)   │
+  │ Practiced patterns (L3) │         │ Original design (L6)    │
+  └─────────────────────────┘         └─────────────────────────┘
+  Short prompt → short answer          Requires uninterrupted
+  Binary: right or wrong              thinking time
+  Benefits from repetition            Benefits from depth
+#+end_example
+
+** Tagging Cards
+
+Add the =:drill:= tag to the question heading (=***= level). Do NOT
+tag the answer heading. The tag goes on the same line as the question:
+
+#+begin_src org
+,*** Q1. Question text here  :drill:
+
+Context or prompt.
+
+,**** Answer
+:PROPERTIES:
+:VISIBILITY: folded
+:END:
+
+Answer text.
+#+end_src
+
+** Card Type
+
+All cards use the *simple* card type (the org-drill default). No
+=DRILL_CARD_TYPE= property is needed. The question heading and its
+body are shown; the =****= answer subheading is hidden until the
+learner presses =RET=.
+
+** Preserving Manual Readability
+
+Keep the =:VISIBILITY: folded= property in answer drawers even though
+org-drill ignores it during sessions. This ensures the document still
+works for manual self-study without org-drill installed.
+
+** L3 Code Cards
+
+L3 questions ask the reader to write code, but org-drill sessions are
+read-only. Include a note in the assessment's "How to Use" section
+explaining that L3 cards require mentally composing the code before
+revealing. The rating should be based on whether the /approach/ was
+correct, not character-perfect syntax.
+
+** What org-drill Adds Automatically
+
+During drill sessions, org-drill writes scheduling properties into
+each card's =:PROPERTIES:= drawer:
+
+#+begin_src org
+:PROPERTIES:
+:DRILL_LAST_INTERVAL: 7.0
+:DRILL_REPEATS_SINCE_FAIL: 3
+:DRILL_TOTAL_REPEATS: 5
+:DRILL_FAILURE_COUNT: 1
+:DRILL_AVERAGE_QUALITY: 3.8
+:DRILL_EASE: 2.46
+:DRILL_LAST_QUALITY: 4
+:DRILL_LAST_REVIEWED: [2026-02-28 Fri 09:15]
+:END:
+#+end_src
+
+These are managed by org-drill. Do not add them manually when
+authoring cards.
+
+** Referencing the Runbook
+
+Every assessment document should reference the shared runbook for
+setup and usage instructions rather than duplicating them:
+
+#+begin_src org
+For setup and daily workflow, see [[./runBook.org][Spaced Repetition Runbook]].
+#+end_src
+
+The runbook (=runBook.org=) is shared across all topics. There is one
+runbook for the entire =Teaching/= directory, not one per topic.
+
+-----
+
+* Writing Style
+
+Follow all conventions from the [[./teachingStyleguide.org][Teaching Document Style Guide]]:
+
+- *Tone:* Educational but practical, as a senior colleague to a
+  mid-level developer
+- *Code examples:* TypeScript, =// ❌ BAD= / =// ✅ GOOD= markers,
+  real types from the codebase
+- *Formatting:* =-----= between major sections, bold for key terms,
+  =#+begin_quote= for critical insights
+- *Paragraphs:* Short (2–4 sentences)
+
+Additional conventions for Go Deeper documents:
+
+- *Architecture sections:* Use ASCII diagrams liberally — system
+  diagrams, state machines, evolution progressions
+- *SRE sections:* Include concrete numbers (connection limits,
+  file descriptor limits, timeout values)
+- *Assessment questions:* Keep the question text concise. Put
+  context and scenario in the body, not the heading
+- *Answers:* Match the expected length for the Bloom's level.
+  L1 answers should not be paragraphs; L6 answers should not be
+  one-liners
+
+-----
+
+* Naming Conventions
+
+| Document type    | Pattern                                   | Example                                           |
+|------------------+-------------------------------------------+---------------------------------------------------|
+| Broadening doc   | =FollowUp_[concept].org=                  | =FollowUp_resource_management.org=                |
+| Assessment doc   | =teaching_[concept]_assessment.org=       | =teaching_resource_management_assessment.org=     |
+| Runbook          | =runBook.org= (shared, one for all)       | =runBook.org=                                     |
+
+Note: the first concrete broadening doc was named =FollowUpKnowledge.org=
+before this convention was established. New documents should follow the
+=FollowUp_[concept].org= pattern.
+
+-----
+
+* Checklist Before Finalising
+
+** Broadening Document
+
+- [ ] Title, author, date, =#+OPTIONS: toc:3= present
+- [ ] Prerequisite links to the teaching document
+- [ ] Introduction references what was taught and what this doc adds
+- [ ] Links to the companion assessment document
+- [ ] At least two broadening lenses chosen and named in title
+- [ ] "How our codebase would evolve" subsection present
+- [ ] At least one "evolution" diagram showing simple → production
+- [ ] Lenses with cross-language relevance include a comparison table
+- [ ] Lenses with operational relevance include concrete numbers and metrics tables
+- [ ] Summary has Key Takeaways (5–8 points)
+- [ ] Summary has a Quick Reference table
+- [ ] Related Documents and Further Reading sections present
+- [ ] Standard footer line
+- [ ] Length is 400–650 lines
+
+** Assessment Document
+
+- [ ] Title, author, date, =#+OPTIONS: toc:3= present
+- [ ] Prerequisites link to both the teaching doc and broadening doc
+- [ ] Introduction includes Bloom's taxonomy diagram
+- [ ] "How to Use" section covers both Self-Study and Spaced Repetition modes
+- [ ] Hybrid approach diagram present
+- [ ] Rating guide table present
+- [ ] Six levels, each with 10–12 questions (60–72 total)
+- [ ] L1 questions use Remember verbs (Name, State, List, Define)
+- [ ] L2 questions use Understand verbs (Explain, Predict, Describe)
+- [ ] L3 questions use Apply verbs (Write, Implement, Rewrite, Fix)
+- [ ] L4 questions use Analyse verbs (Compare, Differentiate, Trace)
+- [ ] L5 questions use Evaluate verbs (Critique, Defend, Justify)
+- [ ] L6 questions use Create verbs (Design, Create, Produce)
+- [ ] L1–L3 questions are tagged =:drill:=
+- [ ] L4–L6 questions are NOT tagged =:drill:=
+- [ ] All answers use =:VISIBILITY: folded= drawers
+- [ ] Questions within each level ordered easier → harder
+- [ ] L6 answers use "A good design should include:" framing
+- [ ] Summary present
+- [ ] Related Documents and Further Reading sections present
+- [ ] Standard footer line
+
+-----
+
+* Example Prompt for Generating a Go Deeper Pair
+
+When asking an agent to produce a Go Deeper pair, provide:
+
+1. *The concept* (e.g., "explicit resource management")
+2. *The prerequisite teaching document* (e.g.,
+   =teaching_explicit_resource_management.org=)
+3. *This style guide* — point the agent to
+   =Teaching/goDeeperStyleguide.org=
+
+Prompt template:
+
+#+begin_example
+Read the teaching document at [path]. Then read the Go Deeper style
+guide at Teaching/goDeeperStyleguide.org. Write a Go Deeper document
+pair:
+
+1. A broadening document (FollowUp_[concept].org) that places
+   [concept] in the context of software architecture and SRE.
+   Show cross-language comparisons, ownership models, failure modes
+   at scale, and how our codebase's usage would evolve.
+
+2. A companion assessment (teaching_[concept]_assessment.org) with
+   10-12 questions at each of the six Bloom's taxonomy levels.
+   Tag L1-L3 with :drill: for spaced repetition. All questions
+   open-ended, ordered easier to harder within each level.
+
+Ground all examples in real code from our codebase.
+#+end_example
+
+-----
+
+* Relationship to Other Guides
+
+#+begin_example
+GUIDE HIERARCHY
+
+  teachingStyleguide.org
+  │
+  │  Defines how to write teaching documents (mechanics, syntax,
+  │  anti-patterns, exercises). Prerequisite for this guide.
+  │
+  └──▶ goDeeperStyleguide.org  (this document)
+       │
+       │  Defines how to write broadening + assessment pairs.
+       │  Builds on the teaching styleguide conventions.
+       │
+       ├──▶ FollowUp_*.org          (broadening documents)
+       ├──▶ *_assessment.org        (assessment documents)
+       └──▶ runBook.org             (shared learner runbook)
+#+end_example
+
+The teaching styleguide owns all shared conventions (tone, formatting,
+code examples). This guide only adds conventions specific to
+broadening documents, assessments, and spaced repetition.
+
+-----
+
+*This style guide itself should evolve.* When a new Go Deeper pair
+introduces a particularly effective technique (a new question type,
+a better assessment structure, etc.), update this guide to capture it.

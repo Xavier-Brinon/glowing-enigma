@@ -1,11 +1,13 @@
 #+title: Explicit Resource Management: =using= and =await using=
 #+author: Claude Code
-#+date: 2026-02-20
+#+date: [2026-02-20]
+#+startup: indent
 #+OPTIONS: toc:3
 
 *Example Sources*:
-- =src/lib/db.ts= — synchronous SQLite connection using =DatabaseSync=
-- =src/lib/db.test.ts= — test suite using =using= for automatic connection cleanup
+- =src/lib/db.ts= :: synchronous SQLite connection using =DatabaseSync=
+- =src/lib/db.test.ts= :: test suite using =using= for automatic
+  connection cleanup
 
 -----
 
@@ -49,18 +51,18 @@ cleaned up when its scope exits, no matter what.
 Before =using=, the standard approach for guaranteed cleanup was
 =try/finally=:
 
-#+begin_src typescript
-// ❌ BEFORE — manual cleanup with try/finally
-import { createDatabaseConnection } from '#/lib/db'
+#+description: ❌ BEFORE — manual cleanup with try/finally
+#+begin_src javascript
+  import { createDatabaseConnection } from '#/lib/db'
 
-function runQuery(): Row {
-  const db = createDatabaseConnection()
-  try {
-    return db.prepare('SELECT * FROM books LIMIT 1').get() as Row
-  } finally {
-    db.close()  // must not forget this
+  function runQuery(): Row {
+    const db = createDatabaseConnection()
+    try {
+      return db.prepare('SELECT * FROM books LIMIT 1').get() as Row
+    } finally {
+      db.close()  // must not forget this
+    }
   }
-}
 #+end_src
 
 This works — but it has four compounding problems.
@@ -69,12 +71,12 @@ This works — but it has four compounding problems.
 
 The =finally= block is optional. A developer in a hurry writes this:
 
-#+begin_src typescript
-// ❌ BAD — no cleanup: connection leaks every time this function is called
-function runQuery(): Row {
-  const db = createDatabaseConnection()
-  return db.prepare('SELECT * FROM books LIMIT 1').get() as Row
-}
+#+description: ❌ BAD — no cleanup: connection leaks every time this function is called
+#+begin_src javascript
+  function runQuery(): Row {
+    const db = createDatabaseConnection()
+    return db.prepare('SELECT * FROM books LIMIT 1').get() as Row
+  }
 #+end_src
 
 No compiler error. No warning. The connection leaks silently.
@@ -83,26 +85,26 @@ No compiler error. No warning. The connection leaks silently.
 
 Add a second resource and the code becomes a pyramid:
 
-#+begin_src typescript
-// ❌ BAD — nesting grows with every additional resource
-function exportData(): void {
-  const db = createDatabaseConnection()
-  try {
-    const file = openOutputFile('./export.csv')
+#+description: ❌ BAD — nesting grows with every additional resource
+#+begin_src javascript
+  function exportData(): void {
+    const db = createDatabaseConnection()
     try {
-      const lock = acquireLock('export')
+      const file = openOutputFile('./export.csv')
       try {
-        writeExport(db, file, lock)
+        const lock = acquireLock('export')
+        try {
+          writeExport(db, file, lock)
+        } finally {
+          lock.release()
+        }
       } finally {
-        lock.release()
+        file.close()
       }
     } finally {
-      file.close()
+      db.close()
     }
-  } finally {
-    db.close()
   }
-}
 #+end_src
 
 Three resources → three nested =try/finally= blocks. This is not
@@ -113,13 +115,13 @@ hypothetical: any real application touches multiple resources at once.
 If =writeExport= throws *and* =file.close()= also throws, the original
 error from =writeExport= is lost:
 
-#+begin_src typescript
-try {
-  writeExport(db, file, lock)     // throws Error("disk full")
-} finally {
-  file.close()                     // also throws Error("file already closed")
-  // The "disk full" error is now gone — only "file already closed" surfaces
-}
+#+begin_src javascript
+  try {
+    writeExport(db, file, lock)     // throws Error("disk full")
+  } finally {
+    file.close()                     // also throws Error("file already closed")
+    // The "disk full" error is now gone — only "file already closed" surfaces
+  }
 #+end_src
 
 The error you actually care about — why did the operation fail? — is
@@ -129,15 +131,17 @@ silently replaced by the cleanup error.
 
 Without =try/finally=, an early =return= skips cleanup entirely:
 
-#+begin_src typescript
-// ❌ BAD — db leaks when the early return fires
-function findBook(id: number): Book | null {
-  const db = createDatabaseConnection()
-  if (!isValidId(id)) return null  // db.close() never called
-  const row = db.prepare('SELECT * FROM books WHERE id = ?').get(id)
-  db.close()
-  return row as Book | null
-}
+#+description: ❌ BAD — db leaks when the early return fires
+#+begin_src javascript
+  function findBook(id: number): Book | null {
+    const db = createDatabaseConnection()
+    if (!isValidId(id)) {
+        return null  // db.close() never called
+    }
+    const row = db.prepare('SELECT * FROM books WHERE id = ?').get(id)
+    db.close()
+    return row as Book | null
+  }
 #+end_src
 
 -----
@@ -146,45 +150,43 @@ function findBook(id: number): Book | null {
 
 In =src/lib/db.ts=, we open a =DatabaseSync= connection and return it:
 
-#+begin_src typescript
-// src/lib/db.ts
-import { DatabaseSync } from 'node:sqlite'
+#+begin_src javascript :file src/lib/db.ts
+  import { DatabaseSync } from 'node:sqlite'
 
-export function createDatabaseConnection(): DatabaseSync {
-  const databasePath = process.env.DATABASE_PATH
+  export function createDatabaseConnection(): DatabaseSync {
+    const databasePath = process.env.DATABASE_PATH
 
-  if (!databasePath) {
-    throw new Error(
-      'DATABASE_PATH environment variable is required. ' +
-        'Please set it using: npx dotenvx set DATABASE_PATH ./data/books.db'
-    )
+    if (!databasePath) {
+      throw new Error(
+        'DATABASE_PATH environment variable is required. ' +
+          'Please set it using: npx dotenvx set DATABASE_PATH ./data/books.db'
+      )
+    }
+
+    return new DatabaseSync(databasePath)
   }
-
-  return new DatabaseSync(databasePath)
-}
 #+end_src
 
 And in =src/lib/db.test.ts=, we use =using= to manage the connection:
 
-#+begin_src typescript
-// src/lib/db.test.ts
-import { afterEach, vi } from 'vitest'
-import { createDatabaseConnection } from './db'
+#+begin_src javascript :file src/lib/db.test.ts
+  import { afterEach, vi } from 'vitest'
+  import { createDatabaseConnection } from './db'
 
-describe('database connection', () => {
-  afterEach(() => {
-    vi.unstubAllEnvs()
+  describe('database connection', () => {
+    afterEach(() => {
+      vi.unstubAllEnvs()
+    })
+
+    it('creates DatabaseSync instance with DATABASE_PATH', () => {
+      vi.stubEnv('DATABASE_PATH', ':memory:')
+
+      // ✅ using — connection is closed automatically when this block exits
+      using connection = createDatabaseConnection()
+      expect(connection).toBeDefined()
+      expect(connection.constructor.name).toBe('DatabaseSync')
+    })
   })
-
-  it('creates DatabaseSync instance with DATABASE_PATH', () => {
-    vi.stubEnv('DATABASE_PATH', ':memory:')
-
-    // ✅ using — connection is closed automatically when this block exits
-    using connection = createDatabaseConnection()
-    expect(connection).toBeDefined()
-    expect(connection.constructor.name).toBe('DatabaseSync')
-  })
-})
 #+end_src
 
 =DatabaseSync= implements =Symbol.dispose= natively (it calls
@@ -203,7 +205,7 @@ it into a =try/finally= block — but one that handles errors from
 multiple disposers correctly. This is the conceptual equivalent of what
 the compiler generates:
 
-#+begin_src typescript
+#+begin_src javascript
 // What you write:
 {
   using db = createDatabaseConnection()
@@ -231,47 +233,47 @@ of omission.
 For an object to work with =using=, it must expose a =Symbol.dispose=
 method. This is the *disposable interface*:
 
-#+begin_src typescript
-// The interface a synchronous disposable must satisfy
-interface Disposable {
-  [Symbol.dispose](): void
-}
+#+begin_src javascript
+  // The interface a synchronous disposable must satisfy
+  interface Disposable {
+    [Symbol.dispose](): void
+  }
 
-// The interface an async disposable must satisfy
-interface AsyncDisposable {
-  [Symbol.asyncDispose](): Promise<void>
-}
+  // The interface an async disposable must satisfy
+  interface AsyncDisposable {
+    [Symbol.asyncDispose](): Promise<void>
+  }
 #+end_src
 
 You can implement it on any class in one line:
 
-#+begin_src typescript
-class DatabaseConnection {
-  private db: DatabaseSync
+#+begin_src javascript
+  class DatabaseConnection {
+    private db: DatabaseSync
 
-  constructor(path: string) {
-    this.db = new DatabaseSync(path)
-  }
+    constructor(path: string) {
+      this.db = new DatabaseSync(path)
+    }
 
-  prepare(sql: string) {
-    return this.db.prepare(sql)
-  }
+    prepare(sql: string) {
+      return this.db.prepare(sql)
+    }
 
-  // Makes this class compatible with `using`
-  [Symbol.dispose](): void {
-    this.db.close()
+    // Makes this class compatible with `using`
+    [Symbol.dispose](): void {
+      this.db.close()
+    }
   }
-}
 #+end_src
 
 To check whether an existing object supports =using= at runtime:
 
-#+begin_src typescript
-import { DatabaseSync } from 'node:sqlite'
+#+begin_src javascript
+  import { DatabaseSync } from 'node:sqlite'
 
-const db = new DatabaseSync(':memory:')
-console.log(Symbol.dispose in db)       // true — safe to use with `using`
-console.log(Symbol.asyncDispose in db)  // false — not async-disposable
+  const db = new DatabaseSync(':memory:')
+  console.log(Symbol.dispose in db)       // true — safe to use with `using`
+  console.log(Symbol.asyncDispose in db)  // false — not async-disposable
 #+end_src
 
 ** Scope and Lifetime
@@ -279,24 +281,25 @@ console.log(Symbol.asyncDispose in db)  // false — not async-disposable
 =using= is block-scoped, exactly like =const= and =let=. The resource
 lives from its declaration to the closing brace of its enclosing block:
 
-#+begin_src typescript
-function processBooks(): void {
-  // db is acquired here
-  using db = createDatabaseConnection()
+#+begin_src javascript
+  function processBooks(): void {
+    // db is acquired here
+    using db = createDatabaseConnection()
 
-  if (someCondition) {
-    return  // db is disposed here — the early return is safe
+    if (someCondition) {
+        return  // db is disposed here — the early return is safe
+    }
+
+    db.prepare('UPDATE books SET processed = 1').run()
+    // db is disposed here — end of function scope
   }
-
-  db.prepare('UPDATE books SET processed = 1').run()
-  // db is disposed here — end of function scope
-}
 #+end_src
 
+#+name: Key insight 1
 #+begin_quote
-*Key insight:* every exit path from the scope — normal completion,
-early =return=, thrown exception, =break= from a loop — triggers
-disposal. You cannot escape it.
+Every exit path from the scope — normal completion, early =return=,
+thrown exception, =break= from a loop — triggers disposal. You cannot
+escape it.
 #+end_quote
 
 ** LIFO Disposal Order with Multiple Resources
@@ -306,16 +309,16 @@ are disposed in *reverse declaration order* (last-in, first-out). This
 mirrors the natural dependency direction: if =b= was created using =a=,
 then =b= should be torn down before =a=.
 
-#+begin_src typescript
-function exportData(): void {
-  // ✅ GOOD — clean, flat, correct disposal order
-  using db   = createDatabaseConnection()   // acquired 1st, disposed 3rd
-  using file = openOutputFile('./out.csv')  // acquired 2nd, disposed 2nd
-  using lock = acquireLock('export')        // acquired 3rd, disposed 1st
+#+description: ✅ GOOD — clean, flat, correct disposal order
+#+begin_src javascript
+  function exportData(): void {
+    using db   = createDatabaseConnection()   // acquired 1st, disposed 3rd
+    using file = openOutputFile('./out.csv')  // acquired 2nd, disposed 2nd
+    using lock = acquireLock('export')        // acquired 3rd, disposed 1st
 
-  writeExport(db, file, lock)
-  // On exit: lock → file → db (LIFO)
-}
+    writeExport(db, file, lock)
+    // On exit: lock → file → db (LIFO)
+  }
 #+end_src
 
 Compare this to the manual nested =try/finally= pyramid shown earlier.
@@ -326,33 +329,33 @@ Same behaviour, zero nesting.
 When the body of a =using= block throws *and* a disposer also throws,
 JavaScript wraps both in a =SuppressedError=:
 
-#+begin_src typescript
-{
-  using db = createDatabaseConnection()
-  throw new Error('query failed')
-  // db[Symbol.dispose]() also throws: Error('connection already closed')
-}
-// Caught: SuppressedError {
-//   error:     Error('connection already closed'),   ← the disposal error
-//   suppressed: Error('query failed'),                ← the original error
-// }
+#+begin_src javascript
+  {
+    using db = createDatabaseConnection()
+    throw new Error('query failed')
+    // db[Symbol.dispose]() also throws: Error('connection already closed')
+  }
+  // Caught: SuppressedError {
+  //   error:     Error('connection already closed'),   ← the disposal error
+  //   suppressed: Error('query failed'),                ← the original error
+  // }
 #+end_src
 
 The original error is preserved as =suppressed= — you can always
 inspect it. With plain =try/finally=, the original error is silently
 overwritten by the cleanup error.
 
-#+begin_src typescript
-// Inspecting a SuppressedError
-try {
-  using db = createDatabaseConnection()
-  throw new Error('query failed')
-} catch (e) {
-  if (e instanceof SuppressedError) {
-    console.error('Original error:', e.suppressed)  // Error: query failed
-    console.error('Disposal error:', e.error)        // Error: already closed
+#+description: Inspecting a SuppressedError
+#+begin_src javascript
+  try {
+      using db = createDatabaseConnection()
+    throw new Error('query failed')
+  } catch (e) {
+    if (e instanceof SuppressedError) {
+      console.error('Original error:', e.suppressed)  // Error: query failed
+      console.error('Disposal error:', e.error)        // Error: already closed
+    }
   }
-}
 #+end_src
 
 -----
@@ -369,60 +372,61 @@ Some resources cannot be closed synchronously. Examples:
 
 For these, implement =Symbol.asyncDispose= and use =await using=:
 
-#+begin_src typescript
-class AsyncDatabasePool {
-  private pool: Pool
+#+begin_src javascript
+  class AsyncDatabasePool {
+      private pool: Pool
 
-  constructor() {
-    this.pool = createPool({ max: 10 })
-  }
+    constructor() {
+      this.pool = createPool({ max: 10 })
+    }
 
-  async query(sql: string): Promise<Row[]> {
-    return this.pool.query(sql)
-  }
+    async query(sql: string): Promise<Row[]> {
+      return this.pool.query(sql)
+    }
 
-  // Makes this class compatible with `await using`
-  async [Symbol.asyncDispose](): Promise<void> {
-    await this.pool.drain()   // wait for in-flight queries to complete
-    await this.pool.clear()   // release all connections
+    // Makes this class compatible with `await using`
+    async [Symbol.asyncDispose](): Promise<void> {
+      await this.pool.drain()   // wait for in-flight queries to complete
+      await this.pool.clear()   // release all connections
+    }
   }
-}
 #+end_src
 
 Usage with =await using= inside an =async= function:
 
-#+begin_src typescript
-async function processBatch(): Promise<void> {
-  // ✅ GOOD — pool is drained and cleared automatically on exit
-  await using pool = new AsyncDatabasePool()
+#+description: ✅ GOOD — pool is drained and cleared automatically on exit
+#+begin_src javascript
+  async function processBatch(): Promise<void> {
+      await using pool = new AsyncDatabasePool()
 
-  const rows = await pool.query('SELECT * FROM books WHERE unprocessed = 1')
-  await Promise.all(rows.map(processRow))
-  // pool[Symbol.asyncDispose]() is awaited here automatically
-}
+    const rows = await pool.query('SELECT * FROM books WHERE unprocessed = 1')
+    await Promise.all(rows.map(processRow))
+    // pool[Symbol.asyncDispose]() is awaited here automatically
+  }
 #+end_src
 
+#+name: Rule 1
 #+begin_quote
-*Rule:* =await using= can only appear inside =async= functions or the
+=await using= can only appear inside =async= functions or the
 top level of ES modules. Just like =await= itself.
 #+end_quote
 
 ** Comparing =using= and =await using=
 
-#+begin_src typescript
-// Synchronous disposal — use when cleanup is instant
-{
-  using db = new DatabaseSync(':memory:')
-  db.exec('CREATE TABLE t (id INTEGER)')
-  // db.close() called synchronously on exit
-}
+#+begin_src javascript
+  // Synchronous disposal — use when cleanup is instant
+  {
+    using db = new DatabaseSync(':memory:')
+    db.exec('CREATE TABLE t (id INTEGER)')
+    // db.close() called synchronously on exit
+  }
 
-// Asynchronous disposal — use when cleanup requires I/O
-async function run(): Promise<void> {
-  await using pool = new AsyncDatabasePool()
-  await pool.query('SELECT 1')
-  // await pool[Symbol.asyncDispose]() called on exit
-}
+  // Asynchronous disposal — use when cleanup requires I/O
+  async function run(): Promise<void> {
+    await using pool = new AsyncDatabasePool()
+    await pool.query('SELECT 1')
+    // await pool[Symbol.asyncDispose]() called on exit
+  }
 #+end_src
 
 ** Mixed Sync and Async in One Scope
@@ -430,17 +434,271 @@ async function run(): Promise<void> {
 You can mix =using= and =await using= in the same =async= function.
 All disposers run on exit in LIFO order, and async ones are awaited:
 
-#+begin_src typescript
-async function syncAndAsync(): Promise<void> {
-  using   syncLock  = acquireLock('write')        // Symbol.dispose
-  await using pool  = new AsyncDatabasePool()     // Symbol.asyncDispose
+#+begin_src javascript
+  async function syncAndAsync(): Promise<void> {
+    using   syncLock  = acquireLock('write')        // Symbol.dispose
+    await using pool  = new AsyncDatabasePool()     // Symbol.asyncDispose
 
-  await pool.query('UPDATE books SET exported = 1')
-  // On exit:
-  //   1. await pool[Symbol.asyncDispose]()  (LIFO: declared last, disposed first)
-  //   2. syncLock[Symbol.dispose]()
-}
+    await pool.query('UPDATE books SET exported = 1')
+    // On exit:
+    //   1. await pool[Symbol.asyncDispose]()  (LIFO: declared last, disposed first)
+    //   2. syncLock[Symbol.dispose]()
+  }
 #+end_src
+
+-----
+
+* =DisposableStack= and =AsyncDisposableStack=: Dynamic Resource Management
+
+** The Problem: When =using= Is Not Enough
+
+=using= is *lexical* — each declaration is a fixed line of code. This
+works perfectly when you know at write time exactly which resources you
+need. But what about these situations?
+
+- You need to open a database connection for each file in a directory,
+  and the file count is only known at runtime
+- You conditionally acquire resources based on configuration
+- You accumulate resources in a loop and need to clean them all up
+  if any step fails
+- You receive a resource from a factory and want to attach a custom
+  cleanup action to it
+
+For all these cases, =using= alone forces awkward patterns. You would
+need to track resources manually in an array and write your own
+=try/finally= cleanup — exactly the error-prone code =using= was meant
+to eliminate.
+
+** What =DisposableStack= Is
+
+=DisposableStack= is a *container for disposables*. It collects
+resources at runtime and disposes them all in LIFO order when the
+stack itself is disposed. Because =DisposableStack= implements
+=Symbol.dispose=, you declare the stack with =using= and everything
+registered on it is cleaned up automatically:
+
+#+begin_src javascript
+  function openAll(paths: string[]): void {
+    using stack = new DisposableStack()
+
+    for (const path of paths) {
+      const db = stack.use(new DatabaseSync(path))  // registered
+      db.exec('PRAGMA journal_mode=WAL')
+    }
+    // All connections disposed in LIFO order when stack exits scope.
+  }
+#+end_src
+
+#+name: Key insight 2
+#+begin_quote
+=using= is to a single resource what =DisposableStack= is to a dynamic
+set of resources. The stack bridges the gap between lexical
+declarations and runtime resource management.
+#+end_quote
+
+** The Full API
+
+=DisposableStack= has four registration methods, each solving a
+different problem:
+
+*** =.use(value)= — Register a Disposable
+
+Registers an object that already implements =Symbol.dispose=. Returns
+the value, so you can chain it with the declaration:
+
+#+begin_src javascript
+  using stack = new DisposableStack()
+  const db = stack.use(new DatabaseSync(':memory:'))  // db implements Symbol.dispose
+  db.exec('CREATE TABLE books (id INTEGER)')
+#+end_src
+
+This is the most common method. Use it when the resource already knows
+how to clean itself up.
+
+#+name: Best practice 2
+#+begin_quote
+Always combine acquisition and registration in a single expression —
+=stack.use(createResource())= — rather than acquiring first and
+registering later. If code is inserted between the two lines, the
+resource can leak on an early throw.
+#+end_quote
+
+#+begin_src javascript
+  // ✅ Good: one expression — no gap for a leak.
+  const db = stack.use(new DatabaseSync(':memory:'))
+
+  // ❌ Bad: if anything throws between these two lines, db leaks.
+  const db = new DatabaseSync(':memory:')
+  stack.use(db)
+#+end_src
+
+*** =.adopt(value, onDispose)= — Register Anything with a Custom Disposer
+
+Registers a value that does /not/ implement =Symbol.dispose=, paired
+with a cleanup function you provide. The cleanup function receives the
+value as its argument:
+
+#+begin_src javascript
+  using stack = new DisposableStack()
+
+  // fs.openSync returns a number (file descriptor) — not disposable.
+  const fd = stack.adopt(
+    fs.openSync('./output.csv', 'w'),
+    (fd) => fs.closeSync(fd)
+  )
+  fs.writeSync(fd, 'id,title\n')
+  // fs.closeSync(fd) called automatically on stack disposal.
+#+end_src
+
+Use =.adopt= when wrapping third-party APIs, raw handles, or any
+value that doesn't implement the disposable protocol.
+
+*** =.defer(callback)= — Register a Cleanup Action (No Resource)
+
+Registers a callback that runs on disposal. No resource is involved —
+just an action. This is similar to Go's =defer=:
+
+#+begin_src javascript
+  using stack = new DisposableStack()
+  const tempDir = fs.mkdtempSync('/tmp/export-')
+  stack.defer(() => fs.rmSync(tempDir, { recursive: true }))
+
+  // Work with tempDir...
+  // tempDir is deleted on stack disposal.
+#+end_src
+
+Use =.defer= for side-effect cleanup: deleting temporary files,
+restoring global state, unregistering event listeners.
+
+*** =.move()= — Transfer Ownership
+
+Creates a new =DisposableStack= containing all the registrations from
+the current stack, then marks the current stack as disposed /without
+calling any disposers/. This transfers ownership of the resources to
+the new stack:
+
+#+begin_src javascript
+  function buildResourceSet(): DisposableStack {
+    using stack = new DisposableStack()
+
+    stack.use(new DatabaseSync(':memory:'))
+    stack.use(new DatabaseSync(':memory:'))
+
+    // Transfer ownership to the caller.
+    // Without .move(), both connections would be disposed when this function exits.
+    return stack.move()
+  }
+
+  // Caller now owns the resources.
+  using resources = buildResourceSet()
+  // Both connections disposed here.
+#+end_src
+
+Use =.move()= when a function builds a resource set but the caller
+should own it. Without =.move()=, the =using stack= declaration
+would dispose everything before the function returns — the same
+anti-pattern as returning a =using= variable directly.
+
+** API at a Glance
+
+| Method            | Input                        | Returns   | Use when                                  |
+|-------------------+------------------------------+-----------+-------------------------------------------|
+| =.use(resource)=  | Object with =Symbol.dispose= | Resource  | Resource already knows how to clean up    |
+| =.adopt(val, fn)= | Any value + cleanup function | Value     | Wrapping non-disposable values            |
+| =.defer(fn)=      | Cleanup callback             | =void=    | Side-effect cleanup, no resource involved |
+| =.move()=         | (none)                       | New stack | Transferring ownership to caller          |
+
+** Properties
+
+| Property    | Type      | Description                              |
+|-------------+-----------+------------------------------------------|
+| =.disposed= | =boolean= | =true= after =dispose()= has been called |
+
+Once disposed, calling =.use()=, =.adopt()=, or =.defer()= on the
+stack will throw — you cannot register new resources on a disposed
+stack.
+
+** Disposal Behaviour
+
+When a =DisposableStack= is disposed (either explicitly via
+=.dispose()= or automatically via =using=):
+
+1. All registered items are disposed in *LIFO order* (last registered,
+   first disposed)
+2. If any disposer throws, the remaining disposers still run
+3. If multiple disposers throw, errors are aggregated into a
+   =SuppressedError= chain — exactly like multiple =using=
+   declarations
+
+#+begin_example
+DISPOSAL ORDER
+
+  stack.use(a)     ← registered 1st, disposed 3rd
+  stack.use(b)     ← registered 2nd, disposed 2nd
+  stack.defer(fn)  ← registered 3rd, disposed 1st
+
+  Disposal: fn() → b[Symbol.dispose]() → a[Symbol.dispose]()
+#+end_example
+
+** =AsyncDisposableStack=
+
+=AsyncDisposableStack= is the async counterpart. It implements
+=Symbol.asyncDispose= and is used with =await using=:
+
+#+begin_src javascript
+  async function migrateAll(sources: string[]): Promise<void> {
+    await using stack = new AsyncDisposableStack()
+
+    for (const source of sources) {
+      const pool = stack.use(new AsyncDatabasePool(source))
+      await pool.query('ALTER TABLE books ADD COLUMN migrated BOOLEAN')
+    }
+    // All pools drained and closed in LIFO order.
+  }
+#+end_src
+
+Its API mirrors =DisposableStack= with three important differences:
+
+1. =.use()= accepts objects with =Symbol.asyncDispose= *and also*
+   plain =Symbol.dispose= objects — so you can mix sync and async
+   resources in one stack
+2. =.adopt()= and =.defer()= accept async callbacks
+3. Disposal is async and *sequential*: each disposer is =await=​ed
+   before the next one runs. This is not parallel — if you have five
+   resources, they tear down one at a time in LIFO order
+
+| Synchronous           | Asynchronous                             |
+|-----------------------+------------------------------------------|
+| =DisposableStack=     | =AsyncDisposableStack=                   |
+| =using stack =...=    | =await using stack =...=                 |
+| =Symbol.dispose= only | =Symbol.asyncDispose= + =Symbol.dispose= |
+| =stack.dispose()=     | =await stack.disposeAsync()=             |
+| Sync disposers only   | Mixed sync and async disposers           |
+
+** When to Reach for a Stack
+
+#+begin_example
+DECISION TREE
+
+  How many resources do you need to manage?
+  │
+  ├─ Fixed, known at write time?
+  │  └─ Use individual `using` declarations
+  │
+  └─ Dynamic, determined at runtime?
+     │
+     ├─ Do they all implement Symbol.dispose?
+     │  └─ Yes → stack.use()
+     │
+     ├─ Some don't implement dispose?
+     │  └─ stack.adopt(value, cleanupFn)
+     │
+     ├─ Need cleanup actions without a resource?
+     │  └─ stack.defer(fn)
+     │
+     └─ Need to return the resource set to the caller?
+        └─ stack.move()
+#+end_example
 
 -----
 
@@ -448,52 +706,52 @@ async function syncAndAsync(): Promise<void> {
 
 ** Pattern 1: Single Resource (most common)
 
-#+begin_src typescript
-// ❌ BEFORE — manual cleanup
-function getBookCount(): number {
-  const db = createDatabaseConnection()
-  try {
+#+begin_src javascript
+  // ❌ BEFORE — manual cleanup
+  function getBookCount(): number {
+      const db = createDatabaseConnection()
+    try {
+      const result = db.prepare('SELECT COUNT(*) as n FROM books').get() as { n: number }
+      return result.n
+    } finally {
+      db.close()
+    }
+  }
+
+  // ✅ AFTER — using
+  function getBookCount(): number {
+    using db = createDatabaseConnection()
     const result = db.prepare('SELECT COUNT(*) as n FROM books').get() as { n: number }
     return result.n
-  } finally {
-    db.close()
+    // db.close() happens here automatically
   }
-}
-
-// ✅ AFTER — using
-function getBookCount(): number {
-  using db = createDatabaseConnection()
-  const result = db.prepare('SELECT COUNT(*) as n FROM books').get() as { n: number }
-  return result.n
-  // db.close() happens here automatically
-}
 #+end_src
 
 ** Pattern 2: Multiple Resources (pyramid eliminated)
 
-#+begin_src typescript
-// ❌ BEFORE — nested try/finally pyramid
-function exportBooks(): void {
-  const db = createDatabaseConnection()
-  try {
-    const file = openFile('./export.csv', 'w')
+#+begin_src javascript
+  // ❌ BEFORE — nested try/finally pyramid
+  function exportBooks(): void {
+    const db = createDatabaseConnection()
     try {
-      writeBooks(db, file)
+        const file = openFile('./export.csv', 'w')
+      try {
+        writeBooks(db, file)
+      } finally {
+        file.close()
+      }
     } finally {
-      file.close()
+      db.close()
     }
-  } finally {
-    db.close()
   }
-}
 
-// ✅ AFTER — flat and readable
-function exportBooks(): void {
-  using db   = createDatabaseConnection()
-  using file = openFile('./export.csv', 'w')
-  writeBooks(db, file)
-  // file.close() then db.close() — LIFO
-}
+  // ✅ AFTER — flat and readable
+  function exportBooks(): void {
+    using db   = createDatabaseConnection()
+    using file = openFile('./export.csv', 'w')
+    writeBooks(db, file)
+    // file.close() then db.close() — LIFO
+  }
 #+end_src
 
 ** Pattern 3: Conditional Resource
@@ -502,12 +760,12 @@ function exportBooks(): void {
 skipped if the value is nullish. This is useful when a resource is
 optionally acquired:
 
-#+begin_src typescript
-// ✅ GOOD — no disposal attempted when db is null
-function tryGetBook(id: number): Book | null {
-  using db = isFeatureEnabled() ? createDatabaseConnection() : null
-  return db?.prepare('SELECT * FROM books WHERE id = ?').get(id) as Book | null
-}
+#+description: ✅ GOOD — no disposal attempted when db is null
+#+begin_src javascript
+  function tryGetBook(id: number): Book | null {
+    using db = isFeatureEnabled() ? createDatabaseConnection() : null
+    return db?.prepare('SELECT * FROM books WHERE id = ?').get(id) as Book | null
+  }
 #+end_src
 
 ** Pattern 4: Making a Third-Party Class Disposable
@@ -515,28 +773,28 @@ function tryGetBook(id: number): Book | null {
 Not all libraries implement =Symbol.dispose=. You can add it without
 subclassing using a wrapper:
 
-#+begin_src typescript
-// Third-party class with no Symbol.dispose
-import { SomeConnection } from 'some-library'
+#+begin_src javascript
+  // Third-party class with no Symbol.dispose
+  import { SomeConnection } from 'some-library'
 
-// ✅ GOOD — thin disposable wrapper
-class DisposableConnection implements Disposable {
-  readonly inner: SomeConnection
+  // ✅ GOOD — thin disposable wrapper
+  class DisposableConnection implements Disposable {
+    readonly inner: SomeConnection
 
-  constructor(config: ConnectionConfig) {
-    this.inner = new SomeConnection(config)
+    constructor(config: ConnectionConfig) {
+      this.inner = new SomeConnection(config)
+    }
+
+    [Symbol.dispose](): void {
+      this.inner.close()
+    }
   }
 
-  [Symbol.dispose](): void {
-    this.inner.close()
+  // Usage
+  function run(): void {
+    using conn = new DisposableConnection({ host: 'localhost' })
+    conn.inner.query('SELECT 1')
   }
-}
-
-// Usage
-function run(): void {
-  using conn = new DisposableConnection({ host: 'localhost' })
-  conn.inner.query('SELECT 1')
-}
 #+end_src
 
 -----
@@ -548,19 +806,19 @@ function run(): void {
 =using= cannot be used at the top level of a *script* (a non-module
 file) because the scope never exits while the process is running.
 
-#+begin_src typescript
-// ❌ BAD — SyntaxError: 'using' declarations may not appear at the top level of a script
-using db = createDatabaseConnection()
-export { db }
+#+description: ❌ BAD — SyntaxError: 'using' declarations may not appear at the top level of a scrip
+#+begin_src javascript
+  using db = createDatabaseConnection()
+  export { db }
 #+end_src
 
-#+begin_src typescript
-// ✅ GOOD — wrap in a function, or use at the top level of an ES module
-export function getDb(): DatabaseSync {
-  using db = createDatabaseConnection()
-  return db.prepare('SELECT 1').get()
-  // db is disposed before this function returns
-}
+#+description: ✅ GOOD — wrap in a function, or use at the top level of an ES module
+#+begin_src javascript
+  export function getDb(): DatabaseSync {
+    using db = createDatabaseConnection()
+    return db.prepare('SELECT 1').get()
+    // db is disposed before this function returns
+  }
 #+end_src
 
 Note: exporting the =using= variable itself is also problematic —
@@ -573,24 +831,24 @@ The resource is disposed *before* the function returns its value to
 the caller. If you return the resource itself, the caller receives a
 closed handle.
 
-#+begin_src typescript
-// ❌ BAD — caller receives a disposed DatabaseSync
-function openDb(): DatabaseSync {
-  using db = createDatabaseConnection()
-  return db  // db.close() fires HERE, before the caller can use it
-}
+#+description: ❌ BAD — caller receives a disposed DatabaseSync
+#+begin_src javascript
+  function openDb(): DatabaseSync {
+    using db = createDatabaseConnection()
+    return db  // db.close() fires HERE, before the caller can use it
+  }
 
-const db = openDb()
-db.prepare('SELECT 1')  // Error: database connection is closed
+  const db = openDb()
+  db.prepare('SELECT 1')  // Error: database connection is closed
 #+end_src
 
-#+begin_src typescript
-// ✅ GOOD — return the result of using the resource, not the resource itself
-function getBookCount(): number {
-  using db = createDatabaseConnection()
-  const result = db.prepare('SELECT COUNT(*) as n FROM books').get() as { n: number }
-  return result.n  // primitive value — safe to return
-}
+#+description: ✅ GOOD — return the result of using the resource, not the resource itself
+#+begin_src javascript
+  function getBookCount(): number {
+    using db = createDatabaseConnection()
+    const result = db.prepare('SELECT COUNT(*) as n FROM books').get() as { n: number }
+    return result.n  // primitive value — safe to return
+  }
 #+end_src
 
 *** Anti-Pattern 3: Using =using= Without TypeScript Configuration
@@ -598,24 +856,24 @@ function getBookCount(): number {
 Without the correct =tsconfig.json= settings, TypeScript will reject
 =using= declarations.
 
-#+begin_src json
-// ❌ BAD — missing target and lib entries
-{
-  "compilerOptions": {
-    "target": "ES2022",
-    "lib": ["ES2022", "DOM"]
+#+description: ❌ BAD — missing target and lib entries
+#+begin_src javascript
+  {
+    "compilerOptions": {
+      "target": "ES2022",
+      "lib": ["ES2022", "DOM"]
+    }
   }
-}
 #+end_src
 
-#+begin_src json
-// ✅ GOOD — ES2024 target + esnext.disposable lib entry
-{
-  "compilerOptions": {
-    "target": "ES2024",
-    "lib": ["ES2024", "DOM", "DOM.Iterable", "esnext.disposable"]
+#+description: ✅ GOOD — ES2024 target + esnext.disposable lib entry
+#+begin_src javascript
+  {
+    "compilerOptions": {
+      "target": "ES2024",
+      "lib": ["ES2024", "DOM", "DOM.Iterable", "esnext.disposable"]
+    }
   }
-}
 #+end_src
 
 *** Anti-Pattern 4: Using =await using= in a Synchronous Function
@@ -624,20 +882,20 @@ Without the correct =tsconfig.json= settings, TypeScript will reject
 =Symbol.asyncDispose= with =await=. In a synchronous function this is
 a compile-time error.
 
-#+begin_src typescript
-// ❌ BAD — compile error: await using requires an async context
-function syncFn(): void {
-  await using pool = new AsyncDatabasePool()
-  pool.query('SELECT 1')
-}
+#+description: ❌ BAD — compile error: await using requires an async context
+#+begin_src javascript
+  function syncFn(): void {
+    await using pool = new AsyncDatabasePool()
+    pool.query('SELECT 1')
+  }
 #+end_src
 
-#+begin_src typescript
-// ✅ GOOD — make the function async
-async function asyncFn(): Promise<void> {
-  await using pool = new AsyncDatabasePool()
-  await pool.query('SELECT 1')
-}
+#+description: ✅ GOOD — make the function async
+#+begin_src javascript
+  async function asyncFn(): Promise<void> {
+    await using pool = new AsyncDatabasePool()
+    await pool.query('SELECT 1')
+  }
 #+end_src
 
 -----
@@ -649,18 +907,18 @@ async function asyncFn(): Promise<void> {
 If the resource implements =Symbol.dispose=, always prefer =using=.
 It is shorter, flatter, and impossible to forget.
 
-#+begin_src typescript
-// ✅ Good: using handles all exit paths
-using db = createDatabaseConnection()
-doWork(db)
-
-// ❌ Bad: try/finally is verbose and easy to omit
-const db = createDatabaseConnection()
-try {
+#+begin_src javascript
+  // ✅ Good: using handles all exit paths
+  using db = createDatabaseConnection()
   doWork(db)
-} finally {
-  db.close()
-}
+
+  // ❌ Bad: try/finally is verbose and easy to omit
+  const db = createDatabaseConnection()
+  try {
+    doWork(db)
+  } finally {
+    db.close()
+  }
 #+end_src
 
 *** 2. Implement =Symbol.dispose= on all resource classes you own
@@ -669,19 +927,19 @@ Any class that wraps a resource (connection, handle, lock) should
 implement =[Symbol.dispose]()=. It costs one method and unlocks
 =using= for all consumers.
 
-#+begin_src typescript
-// ✅ Good: disposable by design
-class BookRepository implements Disposable {
-  private db: DatabaseSync
+#+description: ✅ Good: disposable by design
+#+begin_src javascript
+  class BookRepository implements Disposable {
+    private db: DatabaseSync
 
-  constructor(path: string) { this.db = new DatabaseSync(path) }
+    constructor(path: string) { this.db = new DatabaseSync(path) }
 
-  findById(id: number): Book | null {
-    return this.db.prepare('SELECT * FROM books WHERE id = ?').get(id) as Book | null
+    findById(id: number): Book | null {
+      return this.db.prepare('SELECT * FROM books WHERE id = ?').get(id) as Book | null
+    }
+
+    [Symbol.dispose](): void { this.db.close() }
   }
-
-  [Symbol.dispose](): void { this.db.close() }
-}
 #+end_src
 
 *** 3. Check for =Symbol.dispose= before assuming compatibility
@@ -689,15 +947,15 @@ class BookRepository implements Disposable {
 Not every Node.js built-in or third-party class supports =using= yet.
 Verify at the call site before relying on it.
 
-#+begin_src typescript
-// ✅ Good: verify support before using
-const db = new DatabaseSync(':memory:')
-if (Symbol.dispose in db) {
-  using safeDb = db
-  safeDb.exec('CREATE TABLE t (id INTEGER)')
-} else {
-  // fall back to try/finally
-}
+#+description: ✅ Good: verify support before using
+#+begin_src javascript
+  const db = new DatabaseSync(':memory:')
+  if (Symbol.dispose in db) {
+    using safeDb = db
+    safeDb.exec('CREATE TABLE t (id INTEGER)')
+  } else {
+    // fall back to try/finally
+  }
 #+end_src
 
 *** 4. Use =await using= only when cleanup genuinely needs to be async
@@ -706,12 +964,12 @@ Do not reach for =await using= by default. If =close()= is
 synchronous, use =using=. Unnecessary =async= disposal adds latency
 and complexity.
 
-#+begin_src typescript
-// ✅ Good: DatabaseSync.close() is sync → use `using`
-using db = new DatabaseSync(':memory:')
+#+begin_src javascript
+  // ✅ Good: DatabaseSync.close() is sync → use `using`
+  using db = new DatabaseSync(':memory:')
 
-// ✅ Good: pool.drain() is async → use `await using`
-await using pool = new AsyncDatabasePool()
+  // ✅ Good: pool.drain() is async → use `await using`
+  await using pool = new AsyncDatabasePool()
 #+end_src
 
 *** 5. Never export a =using=-declared variable to consumers
@@ -719,18 +977,18 @@ await using pool = new AsyncDatabasePool()
 The resource is disposed when the enclosing scope exits. A consumer
 who holds a reference to it will receive a disposed object.
 
-#+begin_src typescript
-// ❌ Bad: exported resource will be disposed before consumer uses it
-export function getConnection(): DatabaseSync {
-  using db = createDatabaseConnection()
-  return db  // already disposed on return
-}
+#+begin_src javascript
+  // ❌ Bad: exported resource will be disposed before consumer uses it
+  export function getConnection(): DatabaseSync {
+      using db = createDatabaseConnection()
+    return db  // already disposed on return
+  }
 
-// ✅ Good: export the result of the operation, not the resource
-export function queryBooks(): Book[] {
-  using db = createDatabaseConnection()
-  return db.prepare('SELECT * FROM books').all() as Book[]
-}
+  // ✅ Good: export the result of the operation, not the resource
+  export function queryBooks(): Book[] {
+    using db = createDatabaseConnection()
+    return db.prepare('SELECT * FROM books').all() as Book[]
+  }
 #+end_src
 
 *** 6. Reach for =DisposableStack= when you need dynamic resource management
@@ -739,17 +997,17 @@ export function queryBooks(): Book[] {
 to it at runtime. For dynamic cases (e.g. building a list of resources
 in a loop), use =DisposableStack=:
 
-#+begin_src typescript
-// ✅ Good: DisposableStack for dynamic resource registration
-async function openConnections(paths: string[]): Promise<void> {
-  using stack = new DisposableStack()
+#+description: ✅ Good: DisposableStack for dynamic resource registration
+#+begin_src javascript
+  async function openConnections(paths: string[]): Promise<void> {
+    using stack = new DisposableStack()
 
-  for (const path of paths) {
-    const db = stack.use(new DatabaseSync(path))  // registered for disposal
-    db.exec('PRAGMA journal_mode=WAL')
+      for (const path of paths) {
+      const db = stack.use(new DatabaseSync(path))  // registered for disposal
+      db.exec('PRAGMA journal_mode=WAL')
+    }
+    // All registered databases are closed here in LIFO order
   }
-  // All registered databases are closed here in LIFO order
-}
 #+end_src
 
 -----
@@ -761,7 +1019,7 @@ async function openConnections(paths: string[]): Promise<void> {
 The following function opens a database connection but has a resource
 leak. Identify the leak and explain why it occurs.
 
-#+begin_src typescript
+#+begin_src javascript
 function getLatestBook(): Book | undefined {
   const db = createDatabaseConnection()
 
@@ -790,7 +1048,7 @@ covered, including early returns.
 
 *Fixed:*
 
-#+begin_src typescript
+#+begin_src javascript
 // ✅ using covers the early return path
 function getLatestBook(): Book | undefined {
   using db = createDatabaseConnection()
@@ -810,7 +1068,7 @@ function getLatestBook(): Book | undefined {
 Refactor the following function to eliminate the nested =try/finally=
 structure using =using=.
 
-#+begin_src typescript
+#+begin_src javascript
 function importBooks(csvPath: string): number {
   const db = createDatabaseConnection()
   try {
@@ -842,7 +1100,7 @@ means three nesting levels.
 
 *Fixed:*
 
-#+begin_src typescript
+#+begin_src javascript
 // ✅ Flat, readable, correct LIFO disposal order
 function importBooks(csvPath: string): number {
   using db   = createDatabaseConnection()    // disposed 3rd
@@ -872,7 +1130,7 @@ the class to be compatible with =await using=.
 The =AsyncDisposable= interface from the =esnext.disposable= lib
 describes the contract.
 
-#+begin_src typescript
+#+begin_src javascript
 // ✅ Good: implements AsyncDisposable for use with `await using`
 class MessageQueueConsumer implements AsyncDisposable {
   private client: QueueClient
@@ -907,7 +1165,7 @@ async function runWorker(): Promise<void> {
 Given the following function, list every disposal event in the exact
 order they occur, including what happens when =processRow= throws.
 
-#+begin_src typescript
+#+begin_src javascript
 async function processAllBooks(): Promise<void> {
   using   dbA  = createDatabaseConnection()
   await using pool = new AsyncDatabasePool()
@@ -940,6 +1198,106 @@ The caller catches the error (or its =SuppressedError= wrapper) with
 all three resources guaranteed closed — regardless of which exit path
 was taken.
 
+*** Exercise 5: Use =DisposableStack= to Build a Resource Set
+
+You need to open database connections for a list of shard paths,
+run a health check on each, and close them all when done. Some shards
+might also need a temporary file for logging. Write a function that
+uses =DisposableStack= with =.use()=, =.adopt()=, and =.defer()=.
+
+#+begin_src javascript
+  // Starter code — fill in the DisposableStack usage
+  function healthCheckAll(shards: string[], logDir?: string): void {
+    /** TODO:
+     * 1. Create a DisposableStack
+     * 2. For each shard, open a DatabaseSync and register it with .use()
+     * 3. If logDir is provided, create a temp file with fs.openSync
+     *    and register it with .adopt()
+     * 4. If logDir is provided, register a .defer() to clean up the dir
+     * 5. Run healthCheck(db) on each connection
+     */
+  }
+#+end_src
+
+**** Solution
+:PROPERTIES:
+:VISIBILITY: folded
+:END:
+
+#+begin_src javascript
+function healthCheckAll(shards: string[], logDir?: string): void {
+  using stack = new DisposableStack()
+
+  // .defer() — cleanup action, no resource.
+  if (logDir) {
+    fs.mkdirSync(logDir, { recursive: true })
+    stack.defer(() => fs.rmSync(logDir, { recursive: true }))
+  }
+
+  // .adopt() — raw file descriptor, not disposable.
+  const logFd = logDir
+    ? stack.adopt(fs.openSync(`${logDir}/health.log`, 'w'), (fd) => fs.closeSync(fd))
+    : null
+
+  // .use() — DatabaseSync implements Symbol.dispose.
+  for (const shard of shards) {
+    const db = stack.use(new DatabaseSync(shard))
+    const result = healthCheck(db)
+    if (logFd !== null) {
+      fs.writeSync(logFd, `${shard}: ${result}\n`)
+    }
+  }
+  // On exit: databases closed (LIFO), log file closed, logDir deleted.
+}
+#+end_src
+
+This exercise demonstrates all three registration methods in one
+function:
+
+- =.use()= for resources that implement =Symbol.dispose= (databases)
+- =.adopt()= for values that don't (raw file descriptors)
+- =.defer()= for cleanup actions with no associated resource
+  (directory deletion)
+
+*** Exercise 6: Transfer Ownership with =.move()=
+
+Write a factory function =createTestFixture()= that opens two
+in-memory databases and seeds them with test data. The caller should
+own the resources (so they are /not/ disposed when the factory
+returns). Use =DisposableStack.move()=.
+
+**** Solution
+:PROPERTIES:
+:VISIBILITY: folded
+:END:
+
+#+begin_src javascript
+  function createTestFixture(): DisposableStack {
+      using stack = new DisposableStack()
+
+    const primary = stack.use(new DatabaseSync(':memory:'))
+    primary.exec('CREATE TABLE books (id INTEGER, title TEXT)')
+    primary.exec("INSERT INTO books VALUES (1, 'Dune')")
+
+    const replica = stack.use(new DatabaseSync(':memory:'))
+    replica.exec('CREATE TABLE books (id INTEGER, title TEXT)')
+
+    // Transfer ownership — without .move(), both DBs would close on return.
+    return stack.move()
+  }
+
+  // Caller owns the resources now.
+  using fixture = createTestFixture()
+  // Both databases are open and seeded.
+  // Disposed when this scope exits.
+#+end_src
+
+Without =.move()=, the =using stack= declaration in
+=createTestFixture= would dispose both databases before the function
+returns. =.move()= transfers all registrations to a new stack and
+returns it, leaving the original stack marked as disposed (but without
+actually running any disposers).
+
 -----
 
 * Summary
@@ -964,19 +1322,28 @@ was taken.
 
 ** Quick Reference
 
-| Scenario                             | Declaration    | Method implemented        |
-|--------------------------------------+----------------+---------------------------|
-| Sync cleanup (=close()=, =release()=)| =using=        | =[Symbol.dispose]()=      |
-| Async cleanup (=drain()=, =flush()=) | =await using=  | =[Symbol.asyncDispose]()= |
-| Dynamic resource list                | =DisposableStack= | N/A                    |
-| Optional resource (may be null)      | =using x = condition ? res : null= | =[Symbol.dispose]()= |
+| Scenario                              | Declaration                        | Method implemented        |
+|---------------------------------------+------------------------------------+---------------------------|
+| Sync cleanup (=close()=, =release()=) | =using=                            | =[Symbol.dispose]()=      |
+| Async cleanup (=drain()=, =flush()=)  | =await using=                      | =[Symbol.asyncDispose]()= |
+| Dynamic resource list (sync)          | =DisposableStack=                  | =[Symbol.dispose]()=      |
+| Dynamic resource list (async)         | =AsyncDisposableStack=             | =[Symbol.asyncDispose]()= |
+| Optional resource (may be null)       | =using x = condition ? res : null= | =[Symbol.dispose]()=      |
 
-| Common mistake                    | Why it fails                              |
-|-----------------------------------+-------------------------------------------|
-| Returning the =using= variable    | Resource is disposed before caller gets it |
-| =await using= in a sync function  | Compile error — no async context           |
-| =using= at script top level       | Scope never exits — syntax error           |
-| Missing =esnext.disposable= lib   | =Symbol.dispose= type not found            |
+| =DisposableStack= method | Purpose                                       |
+|--------------------------+-----------------------------------------------|
+| =.use(resource)=         | Register a disposable object                  |
+| =.adopt(value, fn)=      | Register a non-disposable with custom cleanup |
+| =.defer(fn)=             | Register a cleanup callback (no resource)     |
+| =.move()=                | Transfer ownership to a new stack             |
+| =.disposed=              | Check whether the stack has been disposed     |
+
+| Common mistake                   | Why it fails                               |
+|----------------------------------+--------------------------------------------|
+| Returning the =using= variable   | Resource is disposed before caller gets it |
+| =await using= in a sync function | Compile error — no async context           |
+| =using= at script top level      | Scope never exits — syntax error           |
+| Missing =esnext.disposable= lib  | =Symbol.dispose= type not found            |
 
 -----
 
