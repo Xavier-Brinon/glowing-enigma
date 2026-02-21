@@ -797,6 +797,85 @@ subclassing using a wrapper:
   }
 #+end_src
 
+** Pattern 5: Non-Disposable Values with =.adopt()=
+
+Some browser APIs return plain values (strings, numbers) that must be
+manually revoked or released. These are not objects with
+=Symbol.dispose= — they are just values paired with a cleanup
+function. =DisposableStack.adopt()= handles this case directly.
+
+A common example is =URL.createObjectURL=, which returns a string URL
+that must be revoked with =URL.revokeObjectURL= to free the
+underlying Blob memory:
+
+#+begin_src javascript
+  // ❌ BEFORE — easy to forget revokeObjectURL
+  function downloadBlob(blob: Blob): void {
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.click()
+    URL.revokeObjectURL(url)  // must remember this
+  }
+
+  // ✅ AFTER — adopt() ties the value to automatic cleanup
+  function downloadBlob(blob: Blob): void {
+    using stack = new DisposableStack()
+    const url = stack.adopt(URL.createObjectURL(blob), URL.revokeObjectURL)
+    const link = document.createElement('a')
+    link.href = url
+    link.click()
+    // URL.revokeObjectURL(url) fires automatically when the block exits.
+  }
+#+end_src
+
+The pattern generalises to any value-plus-cleanup pair: temporary
+directories (path + =rmSync=), timer IDs (=setTimeout= return +
+=clearTimeout=), or event listener registrations.
+
+** Pattern 6: Cancellation with =.adopt()= and =AbortController=
+
+When launching multiple concurrent operations (e.g., parallel =fetch=
+calls with =Promise.all=), a failure in one should cancel the rest.
+=DisposableStack.adopt()= with an =AbortController= makes this
+automatic:
+
+#+begin_src javascript
+  // ✅ GOOD — all fetches cancelled if any one rejects
+  async function getAllPages(urls: string[]): Promise<Response[]> {
+    using stack = new DisposableStack()
+    const controller = stack.adopt(
+      new AbortController(),
+      (ctrl) => ctrl.abort()
+    )
+
+    const pages = await Promise.all(
+      urls.map((url) => fetch(url, { signal: controller.signal }))
+    )
+    return pages
+    // If Promise.all rejects, the block exits and controller.abort()
+    // fires — cancelling any still-pending fetches.
+  }
+#+end_src
+
+Without =.adopt()=, you would need a =try/finally= around the
+=Promise.all= with a manual =controller.abort()= in the =finally=
+block — exactly the pattern that =using= was designed to replace.
+
+#+begin_example
+ADOPT() PATTERN — VALUE + CLEANUP FUNCTION
+
+  stack.adopt(value, cleanupFn)
+       │          │
+       │          └─── a plain value (string, object, ID)
+       └──────────── on disposal: cleanupFn(value) is called
+
+  Examples:
+    stack.adopt(URL.createObjectURL(blob), URL.revokeObjectURL)
+    stack.adopt(new AbortController(), ctrl => ctrl.abort())
+    stack.adopt(setTimeout(fn, 1000), clearTimeout)
+#+end_example
+
 -----
 
 * Common Anti-Patterns

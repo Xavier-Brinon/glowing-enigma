@@ -179,6 +179,57 @@ OWNERSHIP EVOLUTION
       No concurrency            a logical unit            concurrent requests
 #+end_example
 
+*** The aliasing trap: when lexical ownership breaks
+
+Lexical ownership only works if references do not escape the owning
+scope. When a reference leaks — through an alias, a closure, or a
+property assignment — the resource is disposed on schedule, but the
+escaped reference keeps pointing at a dead object:
+
+#+begin_src typescript
+let leakedRef: DatabaseSync
+{
+  using db = createDatabaseConnection()
+  leakedRef = db  // reference escapes the owning scope
+}
+// db is disposed here — leakedRef now points at a closed connection.
+leakedRef.prepare('SELECT 1')  // use-after-free: throws or corrupts
+#+end_src
+
+The same trap appears with closures:
+
+#+begin_src typescript
+let queryLater: () => void
+{
+  using db = createDatabaseConnection()
+  queryLater = () => db.prepare('SELECT 1').run()  // captures db
+}
+queryLater()  // db was disposed when the block exited
+#+end_src
+
+#+begin_example
+THE ALIASING TRAP
+
+  ┌─────────────────────────┐
+  │  { using db = create()  │  ← db is owned by this scope
+  │    alias = db           │  ← reference escapes
+  │  }                      │  ← db disposed here
+  └─────────────────────────┘
+            │
+            ▼
+  ┌─────────────────────────┐
+  │  alias.query()          │  ← use-after-free
+  │  resource is dead       │
+  └─────────────────────────┘
+#+end_example
+
+This is the architectural flip side of lexical ownership: scope-bound
+lifetime is only safe when no reference outlives the scope. When you
+need a resource to survive past its creation context — to be returned,
+stored, or captured — you must explicitly /transfer/ ownership using
+=DisposableStack.move()= (see the composition root pattern below)
+rather than letting a stale reference dangle.
+
 ** The Dependency Inversion Angle
 
 In a well-architected system, components do not create their own
@@ -295,6 +346,48 @@ The composition root:
 2. Registers each with the stack for automatic cleanup
 3. Uses =.move()= to transfer ownership to the caller
 4. On disposal, everything tears down in reverse order
+
+*** Transactional Acquisition
+
+The composition root above has a subtle but important property: if any
+resource acquisition fails, every resource acquired /before/ the
+failure is automatically cleaned up. The =using stack= declaration
+guarantees this — when =createHttpServer= throws, the block exits and
+the stack disposes =cache= and =db= in reverse order.
+
+Without =DisposableStack=, multi-resource acquisition is fragile:
+
+#+begin_src typescript
+// Without DisposableStack — resource leak on partial failure.
+const db = new DatabaseSync(config.dbPath)
+const cache = createRedisClient(config.redisUrl)  // throws!
+// db is now leaked — nothing will close it.
+#+end_src
+
+With =DisposableStack=, the acquisition becomes *transactional*:
+either all resources are created and ownership is transferred via
+=.move()=, or all already-acquired resources are disposed:
+
+#+begin_example
+TRANSACTIONAL ACQUISITION
+
+  using stack = new DisposableStack()
+
+  stack.use(db)       ✓ registered
+  stack.use(cache)    ✓ registered
+  stack.use(server)   ✗ throws!
+                      │
+                      ▼
+  Block exits → stack disposes:
+    cache.quit()   ← cleaned up
+    db.close()     ← cleaned up
+    (no leak)
+#+end_example
+
+This is the same guarantee that database transactions provide for
+data: all-or-nothing. =DisposableStack= provides all-or-nothing for
+resource acquisition — a property that becomes essential as the number
+of resources grows.
 
 *** =DisposableStack= in Graceful Shutdown
 
